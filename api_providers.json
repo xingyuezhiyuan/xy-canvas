@@ -1,6 +1,6 @@
 [
   {
-    "id": "api-zl5kxk",
+    "id": "api-axwh5r",
     "name": "魔搭",
     "base_url": "https://api-inference.modelscope.cn/v1/",
     "protocol": "apimart",
@@ -31,7 +31,7 @@
   {
     "id": "api",
     "name": "新 API 平台",
-    "base_url": "https://newapi.mrvbg.top",
+    "base_url": "https://api.ukiyostudio.co",
     "protocol": "openai",
     "image_models": [
       "gemini-3.1-flash-image-preview"

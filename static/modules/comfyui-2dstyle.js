@@ -85,7 +85,7 @@ async function style2dExecute(node, refs, prompt, promptId) {
             "inputs": {
                 "text": prompt || "把图像改成xy风格，最佳画质",
                 "嵌入提示词": null,
-                "clip": ["188", 1]
+                "clip": ["189", 1]
             },
             "class_type": "CLIPTextEncode",
             "_meta": { "title": "CLIP Text Encode (Positive Prompt)" }
@@ -94,7 +94,7 @@ async function style2dExecute(node, refs, prompt, promptId) {
             "inputs": {
                 "text": "",
                 "嵌入提示词": null,
-                "clip": ["188", 1]
+                "clip": ["189", 1]
             },
             "class_type": "CLIPTextEncode",
             "_meta": { "title": "CLIP Text Encode (Negative Prompt)" }
@@ -102,7 +102,7 @@ async function style2dExecute(node, refs, prompt, promptId) {
         "137": {
             "inputs": {
                 "cfg": 1,
-                "model": ["188", 0],
+                "model": ["189", 0],
                 "positive": ["141", 0],
                 "negative": ["139", 0]
             },
@@ -198,17 +198,19 @@ async function style2dExecute(node, refs, prompt, promptId) {
             "class_type": "LayerUtility: SaveImagePlus",
             "_meta": { "title": "图层工具：保存图像增强版(高级)" }
         },
-        "188": {
+        "189": {
             "inputs": {
-                "lora_name": "2dstyle-lora.safetensors",
-                "key": "139749",
+                "lora_name": "xylora-v1.safetensors",
+                "key": "138749",
+                "license_code": "fNgIhwu7mUEkwfHicJ8J8Mu7Pq8ta1Nk",
                 "strength_model": 1,
                 "strength_clip": 1,
+                "_force_validate": "1777109617.0608208",
                 "model": ["126", 0],
                 "clip": ["133", 0]
             },
-            "class_type": "LmcqRuntimeLoraDecryption",
-            "_meta": { "title": "Lmcq Runtime Lora Decryption" }
+            "class_type": "LmcqAuthLoraDecryption",
+            "_meta": { "title": "Lmcq Auth LoRA Decryption" }
         }
     };
     

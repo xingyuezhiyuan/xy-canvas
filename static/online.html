@@ -551,10 +551,12 @@
             const masonry = document.getElementById('masonry');
             createPendingCards(batchId, count, masonry);
             startProgressAnimation();
-            const body = { prompt, model:models[provider], size:currentSize(), protocol:getProtocol(models[provider]), reference_images:Object.values(refs).filter(Boolean) };
+            const refImages = Object.values(refs).filter(Boolean).map(r => ({ url: r.url || '', name: r.name || '' }));
+            const body = { prompt, model:models[provider], size:currentSize(), protocol:getProtocol(models[provider]), reference_images: refImages };
+            console.log('发送请求体:', JSON.stringify(body, null, 2));
             const requests = Array.from({length:count}, () =>
                 fetch('/api/online-image', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
-                    .then(async r => { if(!r.ok) throw new Error((await r.json()).detail || '生成失败'); return r.json(); })
+                    .then(async r => { if(!r.ok) { const err = await r.json(); console.error('请求失败:', JSON.stringify(err, null, 2)); throw new Error(err.detail || '生成失败'); } return r.json(); })
             );
             try {
                 const results = await Promise.allSettled(requests);
