@@ -1,0 +1,87 @@
+{
+  "4": {
+    "inputs": {
+      "ckpt_name": "sam3.1_multiplex_fp16.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Checkpoint大模型加载器(简易)"
+    }
+  },
+  "5": {
+    "inputs": {
+      "image": "img_v3_0211k_861392fe-ffdf-495b-82ab-1642a3e5cefg.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "6": {
+    "inputs": {
+      "threshold": 0.5,
+      "refine_iterations": 2,
+      "individual_masks": false,
+      "model": [
+        "4",
+        0
+      ],
+      "image": [
+        "5",
+        0
+      ],
+      "conditioning": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "SAM3_Detect",
+    "_meta": {
+      "title": "SAM3 检测"
+    }
+  },
+  "7": {
+    "inputs": {
+      "opacity": 100,
+      "invert_mask": false,
+      "image": [
+        "5",
+        0
+      ],
+      "mask": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "LayerUtility: ImageOpacity",
+    "_meta": {
+      "title": "图层工具：不透明"
+    }
+  },
+  "8": {
+    "inputs": {
+      "text": "Rockets",
+      "嵌入提示词": null,
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP文本编码器"
+    }
+  },
+  "9": {
+    "inputs": {
+      "images": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  }
+}

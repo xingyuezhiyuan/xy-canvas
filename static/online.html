@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/logo.png" type="image/png">
+    <title>在线生图</title>
+    <script src="/static/modules/auth-token.js?v=20260525001"></script>
+    <link rel="stylesheet" href="/static/tailwind.min.css?v=20260520013">
+    <script src="/static/lucide.min.js?v=20260520001"></script>
+    <script src="/static/theme.js?v=20260509-global-theme-output-drag"></script>
+    <script src="/static/modules/image-editor.js?v=20260528025"></script>
+    <script src="/static/modules/image-viewer.js?v=20260526007"></script>
+    <script src="/static/modules/comfyui-jiandanbeijing.js?v=20260528002"></script>
+    <style>
+        :root { --accent:#00b4d8; --bg:#f0f4fa; --card:#fff; --easing:cubic-bezier(0.4,0,0.2,1); }
+        body { background:var(--bg); font-family:"Inter",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; color:var(--accent); -webkit-font-smoothing:antialiased; }
+        .container-box { max-width:1280px; margin:0 auto; padding:0 40px; margin-top:50px; }
+        .nano-input { background:var(--card); border:1px solid #eef0f2; transition:all .3s var(--easing); }
+        .nano-input:focus { border-color:#000; box-shadow:0 0 0 1px #000; }
+        .upload-item { background:var(--card); border:2px dashed rgba(128,128,128,0.25); transition:all .4s var(--easing); position:relative; overflow:hidden; }
+        .upload-item:hover,.upload-item.drag-over { border-color:#00b4d8; transform:translateY(-2px); box-shadow:0 0 0 3px rgba(0,180,216,0.3), 0 0 30px rgba(0,180,216,0.15); }
+        .upload-item:focus { outline:3px solid #00b4d8; outline-offset:2px; }
+        .upload-content { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; pointer-events:none; }
+        .upload-content i { color:#b0b8c4; transition:color .3s var(--easing); }
+        .upload-item:hover .upload-content i { color:#00b4d8; }
+        .preview-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; animation:fadeIn .5s var(--easing); }
+        .glass-btn { background:#111827; transition:all .3s var(--easing); }
+        .glass-btn:hover { background:#000; transform:translateY(-1px); box-shadow:0 12px 24px rgba(0,0,0,.1); }
+        .result-frame { background:#fff; border-radius:32px; border:1px solid #f1f5f9; box-shadow:0 2px 15px rgba(0,0,0,.02); }
+        .tool-panel { background:#fff; border:1px solid #edf0f3; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+        .model-pill { background:#f8fafc; border:1px solid #edf2f7; border-radius:999px; padding:3px; display:grid; grid-template-columns:1fr 1fr; gap:2px; }
+        .model-option { border-radius:999px; height:34px; display:flex; align-items:center; justify-content:center; gap:6px; color:#64748b; font-size:10px; font-weight:600; letter-spacing:.02em; transition:all .25s var(--easing); }
+        .model-option.active { background:#fff; color:#111827; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+        .control-panel { background:#fff; border:1px solid #edf0f3; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+        .control-label { display:flex; align-items:center; gap:6px; color:#94a3b8; font-size:10px; font-weight:600; letter-spacing:.04em; }
+        .size-row { display:flex; align-items:center; gap:8px; }
+        .ratio-grid { flex:1; display:grid; grid-template-columns:repeat(5,1fr); gap:4px; background:#f8fafc; border:1px solid #edf2f7; border-radius:999px; padding:3px; min-width:0; }
+        .ratio-option { height:30px; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:4px; color:#64748b; font-size:10px; font-weight:600; letter-spacing:0; transition:all .25s var(--easing); }
+        .ratio-option.active { background:#fff; color:#111827; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+        .resolution-toggle { flex:0 0 auto; background:#f8fafc; border:1px solid #edf2f7; border-radius:999px; padding:3px; display:flex; gap:2px; }
+        .resolution-option { height:30px; min-width:42px; border-radius:999px; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:10px; font-weight:600; transition:all .25s var(--easing); }
+        .resolution-option.active { background:#fff; color:#111827; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+        .quick-prompt-btn { height:30px; min-width:42px; border-radius:999px; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:10px; font-weight:600; transition:all .25s var(--easing); background:rgba(0,180,216,.08); border:1px solid rgba(0,180,216,.2); }
+        .quick-prompt-btn:hover { background:rgba(0,180,216,.15); color:#00b4d8; box-shadow:0 0 12px rgba(0,180,216,.25); }
+        .masonry-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
+        @media (min-width:768px){ .masonry-grid{ grid-template-columns:repeat(4,1fr); } }
+        @media (max-width:640px){ .size-row{ align-items:stretch; flex-direction:column; } .ratio-grid{ grid-template-columns:repeat(2,1fr); border-radius:18px; } .resolution-toggle{ align-self:flex-start; } }
+        .batch-pill { background:#f8fafc; border:1px solid #edf2f7; border-radius:999px; padding:3px; display:inline-flex; gap:2px; }
+        .batch-option { height:30px; min-width:36px; border-radius:999px; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:10px; font-weight:600; transition:all .25s var(--easing); cursor:pointer; border:none; background:transparent; }
+        .batch-option.active { background:#00b4d8; color:#fff; box-shadow:0 1px 3px rgba(0,180,216,.25); }
+        .theme-dark .batch-pill { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.1); }
+        .theme-dark .batch-option { color:rgba(255,255,255,.45); }
+        .theme-dark .batch-option.active { background:#00b4d8; color:#fff; box-shadow:0 0 12px rgba(0,180,216,.35); }
+        .masonry-item { aspect-ratio:1/1; border-radius:24px; overflow:hidden; background:#fff; border:1px solid #f1f5f9; transition:all .5s var(--easing); }
+        .masonry-item:hover { transform:translateY(-6px); box-shadow:0 20px 40px rgba(0,0,0,.08); }
+        .theme-dark .masonry-item { background:#111d2a; border-color:rgba(0,240,255,.08); }
+        .gallery-lightbox:hover #lightboxPrevBtn:not([style*="display: none"]) { opacity: 1 !important; pointer-events: auto !important; }
+        .gallery-lightbox:hover #lightboxNextBtn:not([style*="display: none"]) { opacity: 1 !important; pointer-events: auto !important; }
+
+        .pyramid-loader { position:relative; width:160px; height:160px; display:inline-block; transform-style:preserve-3d; transform:rotateX(-20deg); }
+        .pyramid-wrapper { position:relative; width:100%; height:100%; transform-style:preserve-3d; animation:pyramid-spin 4s linear infinite; }
+        @keyframes pyramid-spin { 100% { transform:rotateY(360deg); } }
+        .pyramid-loader .pyramid-wrapper .side { width:80px; height:80px; position:absolute; top:0; left:0; right:0; bottom:0; margin:auto; transform-origin:center top; clip-path:polygon(50% 0%, 0% 100%, 100% 100%); }
+        .pyramid-loader .pyramid-wrapper .side1 { transform:rotateZ(-30deg) rotateY(90deg); background:conic-gradient(#2BDEAC, #F028FD, #D8CCE6, #2F2585); }
+        .pyramid-loader .pyramid-wrapper .side2 { transform:rotateZ(30deg) rotateY(90deg); background:conic-gradient(#2F2585, #D8CCE6, #F028FD, #2BDEAC); }
+        .pyramid-loader .pyramid-wrapper .side3 { transform:rotateX(30deg); background:conic-gradient(#2F2585, #D8CCE6, #F028FD, #2BDEAC); }
+        .pyramid-loader .pyramid-wrapper .side4 { transform:rotateX(-30deg); background:conic-gradient(#2BDEAC, #F028FD, #D8CCE6, #2F2585); }
+        .pyramid-loader .pyramid-wrapper .shadow { width:70px; height:70px; background:#8B5AD5; position:absolute; top:0; left:0; right:0; bottom:0; margin:auto; transform:rotateX(90deg) translateZ(-55px); filter:blur(18px); }
+        .pyramid-progress { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; z-index:10; }
+        .pyramid-progress-ring { width:130px; height:130px; transform:rotate(-90deg); }
+        .pyramid-progress-ring-bg { fill:none; stroke:rgba(255,255,255,.2); stroke-width:4; }
+        .pyramid-progress-ring-fill { fill:none; stroke:#00f0ff; stroke-width:4; stroke-linecap:round; stroke-dasharray:226; stroke-dashoffset:226; transition:stroke-dashoffset .3s ease; filter:drop-shadow(0 0 8px rgba(0,240,255,.6)); }
+        .pyramid-progress-text { font-size:28px; font-weight:800; color:#00f0ff; text-shadow:0 0 10px rgba(0,240,255,.7); }
+        .pyramid-progress-status { margin-top:10px; font-size:10px; font-weight:700; color:#94a3b8; text-align:center; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:.06em; }
+
+        .card-pending { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:#fff; height:100%; }
+        .theme-dark .card-pending { background:#111d2a; }
+        .theme-dark .delete-confirm { background:rgba(17,29,42,.97) !important; }
+        .theme-dark .delete-confirm span { color:#e2e8f0 !important; }
+        .theme-dark .delete-confirm .confirm-no { background:rgba(255,255,255,.1) !important; color:#94a3b8 !important; }
+        .theme-dark .delete-confirm .confirm-no:hover { background:rgba(255,255,255,.18) !important; }
+        .card-pending .mini-pyramid { position:relative; width:64px; height:64px; transform-style:preserve-3d; transform:rotateX(-20deg) scale(0.4); }
+        .card-pending .mini-pyramid .pw { position:relative; width:100%; height:100%; transform-style:preserve-3d; animation:pyramid-spin 4s linear infinite; }
+        .card-pending .mini-pyramid .pw .sd { width:80px; height:80px; position:absolute; top:0; left:0; right:0; bottom:0; margin:auto; transform-origin:center top; clip-path:polygon(50% 0%, 0% 100%, 100% 100%); }
+        .card-pending .mini-pyramid .pw .sd1 { transform:rotateZ(-30deg) rotateY(90deg); background:conic-gradient(#2BDEAC, #F028FD, #D8CCE6, #2F2585); }
+        .card-pending .mini-pyramid .pw .sd2 { transform:rotateZ(30deg) rotateY(90deg); background:conic-gradient(#2F2585, #D8CCE6, #F028FD, #2BDEAC); }
+        .card-pending .mini-pyramid .pw .sd3 { transform:rotateX(30deg); background:conic-gradient(#2F2585, #D8CCE6, #F028FD, #2BDEAC); }
+        .card-pending .mini-pyramid .pw .sd4 { transform:rotateX(-30deg); background:conic-gradient(#2BDEAC, #F028FD, #D8CCE6, #2F2585); }
+        .card-pending .mini-pyramid .pw .sdw { width:60px; height:60px; background:#8B5AD5; position:absolute; top:0; left:0; right:0; bottom:0; margin:auto; transform:rotateX(90deg) translateZ(-50px); filter:blur(12px); }
+        .card-pending .pct-text { font-size:13px; font-weight:800; color:#00b4d8; letter-spacing:.02em; }
+        .card-pending .pct-label { font-size:8px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:.1em; }
+
+        .loader-overlay { position:absolute; inset:0; background:rgba(15,23,42,.85); backdrop-filter:blur(4px); flex-direction:column; align-items:center; justify-content:center; border-radius:32px; z-index:5; }
+
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+        .asset-picker-overlay { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+        .asset-picker-overlay.open { display:flex; }
+        .asset-picker-panel { background:#fff; border-radius:24px; width:520px; max-width:90vw; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 25px 60px rgba(0,0,0,.2); }
+        .asset-picker-head { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #f1f5f9; }
+        .asset-picker-title { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:#111827; text-transform:uppercase; letter-spacing:.05em; }
+        .asset-picker-close { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:#f8fafc; border:none; cursor:pointer; color:#64748b; transition:all .2s; }
+        .asset-picker-close:hover { background:#e2e8f0; color:#111827; }
+        .asset-picker-content { flex:1; overflow-y:auto; padding:16px; min-height:200px; }
+        .asset-picker-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:40px 20px; color:#94a3b8; }
+        .asset-picker-empty span { font-size:12px; font-weight:600; }
+        .asset-picker-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+        @media (max-width:480px){ .asset-picker-grid { grid-template-columns:repeat(3,1fr); } }
+        .asset-picker-item { aspect-ratio:1; border-radius:16px; overflow:hidden; cursor:pointer; border:2px solid transparent; transition:all .2s; position:relative; background:#f8fafc; }
+        .asset-picker-item:hover { border-color:#111827; transform:scale(1.03); }
+        .asset-picker-item img { width:100%; height:100%; object-fit:cover; }
+        .asset-picker-item-name { position:absolute; bottom:0; left:0; right:0; padding:4px 6px; background:linear-gradient(transparent,rgba(0,0,0,.6)); color:#fff; font-size:9px; font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; }
+
+        .preset-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; backdrop-filter:blur(6px); }
+        .preset-overlay.open { display:flex; }
+        .preset-panel { background:linear-gradient(135deg, rgba(10,15,30,.95), rgba(5,10,20,.98)); border-radius:20px; width:90vw; max-width:900px; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 0 40px rgba(0,240,255,.25), 0 0 80px rgba(0,180,216,.15); border:1px solid rgba(0,240,255,.2); overflow:hidden; }
+        .preset-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid rgba(0,240,255,.15); background:rgba(0,240,255,.03); }
+        .preset-title { display:flex; align-items:center; gap:10px; font-size:14px; font-weight:700; color:#22d3ee; text-transform:uppercase; letter-spacing:.08em; }
+        .preset-close { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.05); border:1px solid rgba(0,240,255,.15); cursor:pointer; color:#94a3b8; transition:all .2s; font-size:18px; }
+        .preset-close:hover { background:rgba(0,240,255,.1); color:#22d3ee; border-color:rgba(0,240,255,.3); box-shadow:0 0 12px rgba(0,240,255,.3); }
+        .preset-body { flex:1; overflow-y:auto; padding:16px 20px; }
+        .preset-body::-webkit-scrollbar { width:6px; }
+        .preset-body::-webkit-scrollbar-thumb { background:rgba(0,240,255,.3); border-radius:3px; }
+        .preset-body::-webkit-scrollbar-track { background:rgba(0,0,0,.2); }
+        .preset-category { margin-bottom:20px; }
+        .preset-category-title { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; color:#00f0ff; text-transform:uppercase; letter-spacing:.1em; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid rgba(0,240,255,.1); }
+        .preset-category-title span:first-child { font-size:14px; filter:drop-shadow(0 0 6px rgba(0,240,255,.5)); }
+        .preset-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:8px; }
+        .preset-btn { padding:10px 8px; border-radius:10px; font-size:11px; font-weight:600; text-align:center; background:rgba(0,0,0,.3); border:1px solid rgba(0,240,255,.15); color:#cbd5e1; cursor:pointer; transition:all .25s; position:relative; }
+        .preset-btn:hover { background:rgba(0,240,255,.1); border-color:rgba(0,240,255,.3); color:#22d3ee; }
+        .preset-btn.active { background:linear-gradient(135deg, rgba(0,240,255,.25), rgba(34,211,238,.15)); color:#00f0ff; font-weight:700; border:2px solid #00f0ff; box-shadow:0 0 15px rgba(0,240,255,.4); }
+        .preset-footer { padding:12px 20px; border-top:1px solid rgba(0,240,255,.15); background:rgba(0,240,255,.03); display:flex; gap:10px; }
+        .preset-apply-btn { flex:1; padding:12px; border-radius:12px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; background:linear-gradient(135deg, #0891b2, #22d3ee); color:#fff; border:none; cursor:pointer; transition:all .25s; box-shadow:0 0 20px rgba(0,240,255,.2); }
+        .preset-apply-btn:hover { box-shadow:0 0 30px rgba(0,240,255,.4); transform:translateY(-2px); }
+        .preset-clear-btn { padding:12px 20px; border-radius:12px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; background:rgba(255,255,255,.05); color:#94a3b8; border:1px solid rgba(0,240,255,.15); cursor:pointer; transition:all .25s; }
+        .preset-clear-btn:hover { background:rgba(255,255,255,.1); color:#22d3ee; border-color:rgba(0,240,255,.3); }
+    </style>
+    <link rel="stylesheet" href="/static/theme.css?v=20260511-cyberpunk-cyan">
+</head>
+<body>
+    <div class="container-box min-h-screen flex flex-col">
+        <header class="flex justify-between items-end mb-16">
+            <div class="space-y-1">
+                <h1 class="text-4xl font-extrabold tracking-tighter italic">在线生图</h1>
+                <p class="text-[10px] font-bold uppercase tracking-[0.4em] text-gray-400">GPT / NANO BANANA IMAGE STUDIO</p>
+            </div>
+            <nav class="hidden md:flex gap-8 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                <span class="text-black border-b-2 border-black pb-1">Create</span>
+            </nav>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <div class="lg:col-span-5 space-y-8">
+                <section class="space-y-4">
+                    <div class="flex items-center gap-2 text-gray-400">
+                        <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+                        <span class="text-[10px] font-black uppercase tracking-widest">Prompt</span>
+                        <button onclick="applyFullBodyPrompt()" class="ml-auto quick-prompt-btn">正面全身</button>
+                        <button onclick="applyThreeViewPrompt()" class="quick-prompt-btn">角色三视图</button>
+                        <button onclick="togglePresetPanel()" class="w-7 h-7 bg-white/80 backdrop-blur rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-[0_0_20px_rgba(34,211,238,0.6)] shadow-[0_0_12px_rgba(34,211,238,0.35)] group" title="提示词预设" style="font-size:16px; color:#0891b2;">
+                            ✦
+                        </button>
+                    </div>
+                    <textarea id="promptInput" rows="5" class="nano-input w-full p-6 rounded-3xl text-sm outline-none resize-none placeholder-gray-300" placeholder="输入想生成或编辑的画面..."></textarea>
+                </section>
+
+                <section class="space-y-4">
+                    <div class="flex items-center gap-2 text-gray-400">
+                        <i data-lucide="images" class="w-3.5 h-3.5"></i>
+                        <span class="text-[10px] font-black uppercase tracking-widest">Reference Images</span>
+                        <button onclick="openAssetPickerForRefs()" class="ml-auto w-10 h-10 bg-white/80 backdrop-blur rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-[0_0_20px_rgba(251,191,36,0.6)] shadow-[0_0_12px_rgba(251,191,36,0.35)] group" title="从资产库选择">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="transition-all duration-300 group-hover:stroke-amber-500"><path d="M12 10v6"/><path d="M9 13h6"/><path d="M22 20v-8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2a2 2 0 0 0-1.66-.9H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2Z"/></svg>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div id="drop-zone-1" tabindex="0" onclick="document.getElementById('file1').click()" class="upload-item group aspect-square rounded-2xl flex flex-col items-center justify-center cursor-pointer">
+                            <input type="file" id="file1" accept="image/*" class="hidden" onchange="handleFile(this.files[0],1)">
+                            <div class="upload-content">
+                                <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                                <span class="text-[10px] font-medium text-gray-400">点击或拖拽</span>
+                                <span class="text-[8px] text-gray-300">支持 Ctrl+V 粘贴</span>
+                                <span class="text-[9px] mt-1 font-bold text-gray-400 uppercase">Main</span>
+                            </div>
+                            <img id="prev1" class="preview-img hidden"><button id="del1" onclick="clearSlot(1,event)" class="hidden absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full shadow-sm z-10">×</button><button id="edit1" onclick="handleEdit(1,event)" class="hidden absolute top-2 right-10 w-6 h-6 bg-white/90 rounded-full shadow-sm z-10 text-[10px] font-bold">✎</button>
+                        </div>
+                        <div id="drop-zone-2" tabindex="0" onclick="document.getElementById('file2').click()" class="upload-item group aspect-square rounded-2xl flex flex-col items-center justify-center cursor-pointer">
+                            <input type="file" id="file2" accept="image/*" class="hidden" onchange="handleFile(this.files[0],2)">
+                            <div class="upload-content">
+                                <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                                <span class="text-[10px] font-medium text-gray-400">点击或拖拽</span>
+                                <span class="text-[8px] text-gray-300">支持 Ctrl+V 粘贴</span>
+                                <span class="text-[9px] mt-1 font-bold text-gray-400 uppercase">Aux A</span>
+                            </div>
+                            <img id="prev2" class="preview-img hidden"><button id="del2" onclick="clearSlot(2,event)" class="hidden absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full shadow-sm z-10">×</button><button id="edit2" onclick="handleEdit(2,event)" class="hidden absolute top-2 right-10 w-6 h-6 bg-white/90 rounded-full shadow-sm z-10 text-[10px] font-bold">✎</button>
+                        </div>
+                        <div id="drop-zone-3" tabindex="0" onclick="document.getElementById('file3').click()" class="upload-item group aspect-square rounded-2xl flex flex-col items-center justify-center cursor-pointer">
+                            <input type="file" id="file3" accept="image/*" class="hidden" onchange="handleFile(this.files[0],3)">
+                            <div class="upload-content">
+                                <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                                <span class="text-[10px] font-medium text-gray-400">点击或拖拽</span>
+                                <span class="text-[8px] text-gray-300">支持 Ctrl+V 粘贴</span>
+                                <span class="text-[9px] mt-1 font-bold text-gray-400 uppercase">Aux B</span>
+                            </div>
+                            <img id="prev3" class="preview-img hidden"><button id="del3" onclick="clearSlot(3,event)" class="hidden absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full shadow-sm z-10">×</button><button id="edit3" onclick="handleEdit(3,event)" class="hidden absolute top-2 right-10 w-6 h-6 bg-white/90 rounded-full shadow-sm z-10 text-[10px] font-bold">✎</button>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="tool-panel">
+                    <div class="control-label">
+                        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+                        <span>Model</span>
+                    </div>
+                    <div class="model-pill">
+                        <button id="gptOpt" class="model-option" onclick="setProvider('gpt')"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i>GPT</button>
+                        <button id="nano1Opt" class="model-option" onclick="setProvider('nano1')"><i data-lucide="bot" class="w-3.5 h-3.5"></i>Nano 1</button>
+                        <button id="nano2Opt" class="model-option active" onclick="setProvider('nano2')"><i data-lucide="bot" class="w-3.5 h-3.5"></i>Nano 2</button>
+                    </div>
+                    <div class="control-label mt-1">
+                        <i data-lucide="ruler" class="w-3.5 h-3.5"></i>
+                        <span>Size</span>
+                    </div>
+                    <div class="size-row">
+                        <div class="ratio-grid">
+                            <button id="ratio-square" class="ratio-option active" onclick="setRatio('square')"><i data-lucide="square" class="w-3 h-3"></i>1:1</button>
+                            <button id="ratio-portrait" class="ratio-option" onclick="setRatio('portrait')"><i data-lucide="rectangle-vertical" class="w-3 h-3"></i>2:3</button>
+                            <button id="ratio-landscape" class="ratio-option" onclick="setRatio('landscape')"><i data-lucide="rectangle-horizontal" class="w-3 h-3"></i>3:2</button>
+                            <button id="ratio-story" class="ratio-option" onclick="setRatio('story')"><i data-lucide="smartphone" class="w-3 h-3"></i>9:16</button>
+                            <button id="ratio-wide" class="ratio-option" onclick="setRatio('wide')"><i data-lucide="monitor" class="w-3 h-3"></i>16:9</button>
+                        </div>
+                        <div class="resolution-toggle" title="分辨率">
+                            <button id="res-1k" class="resolution-option active" onclick="setResolution('1k')">1K</button>
+                            <button id="res-2k" class="resolution-option" onclick="setResolution('2k')">2K</button>
+                        </div>
+                    </div>
+                    <div class="control-label mt-1">
+                        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                        <span>Batch</span>
+                    </div>
+                    <div class="batch-pill flex gap-1">
+                        <button class="batch-option active" onclick="setBatchCount(1)">1</button>
+                        <button class="batch-option" onclick="setBatchCount(2)">2</button>
+                        <button class="batch-option" onclick="setBatchCount(3)">3</button>
+                        <button class="batch-option" onclick="setBatchCount(4)">4</button>
+                    </div>
+                </div>
+
+                <button id="genBtn" onclick="submitImage()" class="glass-btn w-full py-5 text-white rounded-3xl font-bold flex items-center justify-center gap-3 shadow-lg">
+                    <i data-lucide="zap" class="w-4 h-4 text-yellow-400"></i>
+                    <span class="tracking-[0.3em] text-[11px] uppercase">Generate</span>
+                </button>
+            </div>
+
+            <div class="lg:col-span-7">
+                <div id="resultBox" class="result-frame min-h-[500px] lg:h-full flex items-center justify-center relative overflow-hidden">
+                    <div id="placeholder" class="text-center space-y-4 opacity-20"><i data-lucide="layout" class="w-12 h-12 mx-auto stroke-[1px]"></i><p class="text-[10px] font-black tracking-[0.5em] uppercase">Canvas Ready</p></div>
+                    <div id="loader" class="hidden loader-overlay">
+                        <div class="pyramid-loader">
+                            <div class="pyramid-wrapper">
+                                <div class="side side1"></div>
+                                <div class="side side2"></div>
+                                <div class="side side3"></div>
+                                <div class="side side4"></div>
+                                <div class="shadow"></div>
+                            </div>
+                            <div class="pyramid-progress">
+                                <svg class="pyramid-progress-ring" viewBox="0 0 76 76">
+                                    <circle class="pyramid-progress-ring-bg" cx="38" cy="38" r="36"/>
+                                    <circle id="progressFill" class="pyramid-progress-ring-fill" cx="38" cy="38" r="36"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <span id="progressStatus" class="pyramid-progress-status">生成中...</span>
+                        <span id="progressText" class="pyramid-progress-text">0%</span>
+                    </div>
+                    <img id="outputImg" class="hidden w-full h-full object-contain p-8 cursor-zoom-in" onclick="zoomImage()">
+                    <button id="downloadBtn" onclick="downloadImage()" class="hidden absolute top-8 right-8 w-12 h-12 bg-white/90 shadow-2xl rounded-2xl flex items-center justify-center hover:bg-black hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <section class="mt-32">
+            <div class="flex items-center gap-6 mb-12"><h2 class="text-[11px] font-black uppercase tracking-[0.5em]">Archives</h2><div class="h-px flex-1 bg-gray-100"></div></div>
+            <div id="masonry" class="masonry-grid"></div>
+            <div id="loadMoreTrigger" class="py-20 text-center text-gray-300 text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:text-black">Load More Archive</div>
+        </section>
+    </div>
+
+    <div id="assetPickerOverlay" class="asset-picker-overlay" onclick="if(event.target===this)closeAssetPickerForRefs()">
+        <div class="asset-picker-panel" onclick="event.stopPropagation()">
+            <div class="asset-picker-head">
+                <div class="asset-picker-title"><i data-lucide="folder-open" class="w-4 h-4"></i><span>从资产库选择</span></div>
+                <button class="asset-picker-close" onclick="closeAssetPickerForRefs()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+            <div id="assetPickerContent" class="asset-picker-content">
+                <div class="asset-picker-empty"><span>加载中...</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="lightbox" onclick="handleOutsideClick(event)" class="hidden fixed inset-0 z-50 gallery-lightbox flex flex-col items-center justify-center p-8 overflow-auto">
+        <button onclick="closeLightbox()" class="absolute top-10 right-10 text-gray-400 hover:text-black">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <button id="lightboxPrevBtn" onclick="ImageViewer.prevImage()" class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all opacity-0 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </button>
+        <button id="lightboxNextBtn" onclick="ImageViewer.nextImage()" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all opacity-0 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m9 18 6-6-6-6"/>
+            </svg>
+        </button>
+        <div class="max-w-5xl w-full flex flex-col items-center pointer-events-none">
+            <div class="relative pointer-events-auto">
+                <img id="lightboxImg" src="" class="max-h-[85vh] rounded-lg shadow-xl">
+                <div id="lightboxRes" class="absolute bottom-6 left-6 bg-black/50 backdrop-blur-md text-white px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest shadow-2xl">0x0</div>
+                <button onclick="downloadLightboxImage()" class="absolute top-4 right-4 w-10 h-10 bg-black/50 hover:bg-black text-white rounded-xl flex items-center justify-center shadow-lg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 自动检测访问来源：localhost/127.0.0.1 使用直连模式，局域网使用代理模式
+        const _isLocalAccess = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+        const COMFYUI_CONFIG = {"local_address": "127.0.0.1:8188", "cloud_address": "https://kg03rrnf6rg9bxab-8188.container.x-gpu.com/", "active_server": _isLocalAccess ? "本地服务器" : "云端服务器"};
+
+        let COMFYUI_SERVER = 'http://127.0.0.1:8188';
+        let IS_LOCAL_SERVER = _isLocalAccess;
+        const CLIENT_ID = localStorage.getItem("client_id") || ('online_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9));
+        if (!localStorage.getItem("client_id")) localStorage.setItem("client_id", CLIENT_ID);
+
+        async function loadConfig() {
+            const localConfig = localStorage.getItem('comfyui_config');
+            if (localConfig) {
+                try {
+                    const config = JSON.parse(localConfig);
+                    const activeServer = config.active_server || '本地服务器';
+                    IS_LOCAL_SERVER = (activeServer === '本地服务器');
+                    if (activeServer === '云端服务器' && config.cloud_address) {
+                        COMFYUI_SERVER = (config.cloud_address.startsWith('http') ? config.cloud_address : `https://${config.cloud_address}`).replace(/\/+$/, '');
+                    } else if (config.local_address) {
+                        COMFYUI_SERVER = (config.local_address.startsWith('http') ? config.local_address : `http://${config.local_address}`).replace(/\/+$/, '');
+                    }
+                    return;
+                } catch (e) {
+                    console.error('解析本地配置失败:', e);
+                }
+            }
+        }
+
+        lucide.createIcons();
+        let refs = {1:null,2:null,3:null};
+        let provider = 'nano2';
+        let ratio = 'square';
+        let resolution = '1k';
+        let models = {gpt:'gpt-image-2-c', nano1:'gemini-3-pro-image-preview', nano2:'gemini-3.1-flash-image-preview'};
+        function getProtocol(model){
+            return model.toLowerCase().includes('gemini') ? 'gemini' : 'openai';
+        }
+        let allHistory = [], currentIndex = 0, currentResult = null, currentLightboxData = null, isLoading = false;
+        let batchCount = 1;
+        const PAGE_SIZE = 24;
+        const SIZE_OPTIONS = {
+            square: [
+                ['1024x1024', '1k'],
+                ['1536x1536', '2k']
+            ],
+            portrait: [
+                ['720x1080', '1k'],
+                ['1024x1536', '2k']
+            ],
+            landscape: [
+                ['1080x720', '1k'],
+                ['1536x1024', '2k']
+            ],
+            story: [
+                ['720x1280', '1k'],
+                ['1080x1920', '2k']
+            ],
+            wide: [
+                ['1280x720', '1k'],
+                ['1920x1080', '2k']
+            ]
+        };
+
+        async function initModels(){
+            try {
+                const cfg = await fetch('/api/config').then(r=>r.json());
+                const imageModels = cfg.image_models || [];
+                models.nano2 = imageModels.find(m => m.toLowerCase().includes('flash')) || imageModels.find(m => m.toLowerCase().includes('gemini')) || 'gemini-3.1-flash-image-preview';
+                models.nano1 = imageModels.find(m => m.toLowerCase().includes('pro')) || imageModels.find(m => m.toLowerCase().includes('gemini')) || 'gemini-3-pro-image-preview';
+            } catch(e) {}
+        }
+
+        function setProvider(next){
+            provider = next;
+            document.getElementById('gptOpt').classList.toggle('active', next === 'gpt');
+            document.getElementById('nano1Opt').classList.toggle('active', next === 'nano1');
+            document.getElementById('nano2Opt').classList.toggle('active', next === 'nano2');
+        }
+
+        function setBatchCount(next){
+            batchCount = next;
+            document.querySelectorAll('.batch-option').forEach(btn => btn.classList.toggle('active', parseInt(btn.textContent) === next));
+        }
+
+        function setRatio(next, preferredSize = ''){
+            ratio = next;
+            ['square','portrait','landscape','story','wide'].forEach(item => {
+                document.getElementById(`ratio-${item}`).classList.toggle('active', item === next);
+            });
+            if (preferredSize) {
+                const match = SIZE_OPTIONS[next].find(([value]) => value === preferredSize);
+                if (match) resolution = match[1];
+            }
+            updateResolutionUI();
+        }
+
+        function setResolution(next){
+            resolution = next;
+            updateResolutionUI();
+        }
+
+        function updateResolutionUI(){
+            document.getElementById('res-1k').classList.toggle('active', resolution === '1k');
+            document.getElementById('res-2k').classList.toggle('active', resolution === '2k');
+        }
+
+        function currentSize(){
+            const options = SIZE_OPTIONS[ratio] || SIZE_OPTIONS.square;
+            const match = options.find(([, label]) => label === resolution) || options[0];
+            return match[0];
+        }
+
+        [1,2,3].forEach(id => {
+            const zone = document.getElementById(`drop-zone-${id}`);
+            zone.ondragover = e => { e.preventDefault(); zone.classList.add('drag-over'); };
+            zone.ondragleave = () => zone.classList.remove('drag-over');
+            zone.ondrop = e => { e.preventDefault(); zone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0], id); };
+            zone.addEventListener('paste', e => {
+                e.preventDefault();
+                const item = [...(e.clipboardData?.items || [])].find(x => x.kind === 'file' && x.type.startsWith('image/'));
+                if (item) handleFile(item.getAsFile(), id);
+            });
+        });
+        window.addEventListener('paste', e => {
+            const item = [...(e.clipboardData?.items || [])].find(x => x.kind === 'file' && x.type.startsWith('image/'));
+            if (item) handleFile(item.getAsFile(), firstEmptySlot());
+        });
+        function firstEmptySlot(){ return [1,2,3].find(id => !refs[id]) || 1; }
+
+        async function handleFile(file, index){
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const prev = document.getElementById(`prev${index}`);
+                prev.src = e.target.result; prev.classList.remove('hidden');
+                document.getElementById(`del${index}`).classList.remove('hidden');
+                document.getElementById(`edit${index}`).classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+            const form = new FormData();
+            form.append('files', file);
+            const data = await fetch('/api/ai/upload', {method:'POST', body:form}).then(r=>r.json());
+            refs[index] = data.files[0];
+        }
+        function clearSlot(index, ev){
+            if(ev) ev.stopPropagation();
+            refs[index] = null;
+            document.getElementById(`prev${index}`).src = '';
+            document.getElementById(`prev${index}`).classList.add('hidden');
+            document.getElementById(`del${index}`).classList.add('hidden');
+            document.getElementById(`edit${index}`).classList.add('hidden');
+        }
+        function handleEdit(index, ev){
+            if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+            const ref = refs[index];
+            if (!ref || !ref.url) return;
+            if (typeof ImageEditor === 'undefined') { alert('图像编辑器未加载'); return; }
+            ImageEditor.open(ref.url, {
+                onSave: function(result) {
+                    if (result.url) {
+                        refs[index].url = result.url;
+                        refs[index].name = result.name || refs[index].name;
+                        document.getElementById(`prev${index}`).src = result.url;
+                    }
+                    if (result.operation === 'outpaint') {
+                        document.getElementById('promptInput').value = '扩图';
+                    }
+                },
+                onCancel: function() {}
+            });
+        }
+
+        async function openAssetPickerForRefs() {
+            const overlay = document.getElementById('assetPickerOverlay');
+            const content = document.getElementById('assetPickerContent');
+            content.innerHTML = '<div class="asset-picker-empty"><span>加载中...</span></div>';
+            overlay.classList.add('open');
+            lucide.createIcons();
+            try {
+                const res = await fetch('/api/user/assets');
+                if (res.status === 401) { content.innerHTML = '<div class="asset-picker-empty"><span>请先登录后再使用资产库</span></div>'; return; }
+                if (!res.ok) throw new Error('获取资产列表失败');
+                const data = await res.json();
+                const images = data.files || [];
+                if (!images.length) {
+                    content.innerHTML = '<div class="asset-picker-empty"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 10v6"/><path d="M9 13h6"/><path d="M22 20v-8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2a2 2 0 0 0-1.66-.9H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2Z"/></svg><span>暂无资产图片</span></div>';
+                    return;
+                }
+                content.innerHTML = '<div class="asset-picker-grid">' + images.map(img =>
+                    '<div class="asset-picker-item" onclick="applyAssetToRef(\'' + img.url.replace(/'/g, "\\'") + '\',\'' + img.name.replace(/'/g, "\\'") + '\')">' +
+                        '<img src="' + img.url + '" alt="' + img.name.replace(/"/g, '&quot;') + '" loading="lazy">' +
+                        '<div class="asset-picker-item-name">' + img.name.replace(/</g, '&lt;') + '</div>' +
+                    '</div>'
+                ).join('') + '</div>';
+            } catch (err) {
+                content.innerHTML = '<div class="asset-picker-empty"><span>加载失败: ' + err.message + '</span></div>';
+            }
+        }
+
+        function closeAssetPickerForRefs() {
+            document.getElementById('assetPickerOverlay').classList.remove('open');
+        }
+
+        function applyAssetToRef(url, name) {
+            const index = firstEmptySlot();
+            const prev = document.getElementById('prev' + index);
+            prev.src = url;
+            prev.classList.remove('hidden');
+            document.getElementById('del' + index).classList.remove('hidden');
+            document.getElementById('edit' + index).classList.remove('hidden');
+            refs[index] = { url: url, name: name };
+            closeAssetPickerForRefs();
+        }
+
+        async function submitImage(){
+            const prompt = document.getElementById('promptInput').value.trim();
+            if(!prompt){ alert('请输入提示词'); return; }
+            const btn = document.getElementById('genBtn'), loader = document.getElementById('loader'), placeholder = document.getElementById('placeholder'), out = document.getElementById('outputImg'), dl = document.getElementById('downloadBtn');
+            btn.disabled = true; placeholder.classList.add('hidden'); out.classList.add('hidden'); dl.classList.add('hidden'); loader.classList.remove('hidden'); loader.style.display = 'flex';
+            const count = batchCount;
+            const batchId = Date.now();
+            const masonry = document.getElementById('masonry');
+            createPendingCards(batchId, count, masonry);
+            startProgressAnimation();
+            const body = { prompt, model:models[provider], size:currentSize(), protocol:getProtocol(models[provider]), reference_images:Object.values(refs).filter(Boolean) };
+            const requests = Array.from({length:count}, () =>
+                fetch('/api/online-image', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+                    .then(async r => { if(!r.ok) throw new Error((await r.json()).detail || '生成失败'); return r.json(); })
+            );
+            try {
+                const results = await Promise.allSettled(requests);
+                results.forEach((res, i) => {
+                    if(res.status === 'fulfilled'){
+                        const data = res.value;
+                        updatePendingCard(batchId, i, data);
+                        if(i === 0){ currentResult = data; out.src = data.images[0]; out.classList.remove('hidden'); dl.classList.remove('hidden'); }
+                    } else {
+                        failPendingCard(batchId, i);
+                    }
+                });
+                stopProgressAnimation();
+            } catch(err) {
+                stopProgressAnimation();
+            } finally {
+                loader.classList.add('hidden'); loader.style.display = ''; btn.disabled = false;
+            }
+        }
+
+        function createPendingCards(batchId, count, masonry){
+            for(let i = 0; i < count; i++){
+                const id = `pending-${batchId}-${i}`;
+                if(document.getElementById(id)) continue;
+                const card = document.createElement('div');
+                card.id = id;
+                card.className = 'masonry-item';
+                card.innerHTML = `<div class="card-pending"><div class="mini-pyramid"><div class="pw"><div class="sd sd1"></div><div class="sd sd2"></div><div class="sd sd3"></div><div class="sd sd4"></div><div class="sdw"></div></div></div><span class="pct-text" id="pct-${id}">0%</span><span class="pct-label">生成中</span></div>`;
+                masonry.prepend(card);
+                startCardProgress(id);
+            }
+        }
+
+        const cardTimers = {};
+
+        function startCardProgress(pendingId){
+            let pv = 0;
+            const el = document.getElementById(`pct-${pendingId}`);
+            if(!el) return;
+            cardTimers[pendingId] = setInterval(() => {
+                if(pv < 95){
+                    pv = Math.min(95, pv + (95 - pv) / 20 + 0.3);
+                    el.textContent = Math.round(pv) + '%';
+                }
+            }, 350);
+        }
+
+        function stopCardProgress(pendingId){
+            if(cardTimers[pendingId]){ clearInterval(cardTimers[pendingId]); delete cardTimers[pendingId]; }
+        }
+
+        function updatePendingCard(batchId, index, data){
+            const id = `pending-${batchId}-${index}`;
+            const card = document.getElementById(id);
+            if(!card || !data.images?.[0]) return;
+            stopCardProgress(id);
+            if(document.getElementById(`history-${data.timestamp}`)){ card.remove(); return; }
+            card.id = `history-${data.timestamp}`;
+            card.className = 'masonry-item group relative cursor-zoom-in';
+            card.onclick = () => openLightbox(data.images[0], allHistory.map(h => h.images[0]), allHistory.indexOf(data));
+            card.innerHTML = `<img src="${data.images[0]}" class="w-full h-full object-cover block group-hover:scale-105 transition-transform duration-1000" loading="lazy">
+                <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 z-10">
+                    <button onclick="backfillParams('${data.timestamp}',event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors" title="参数回填">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v.5"/></svg>
+                    </button>
+                    <button onclick="processRemoveBg('${data.images[0]}','${data.timestamp}',event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors" title="去除背景">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    </button>
+                    <button onclick="saveToAssetLibrary('${data.images[0]}',event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors" title="保存到资产库">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v6"/><path d="M9 13h6"/><path d="M22 20v-8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2a2 2 0 0 0-1.66-.9H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2Z"/></svg>
+                    </button>
+                    <button onclick="downloadHistoryImage('${data.images[0]}',event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </button>
+                    <button onclick="deleteHistoryItem('${data.timestamp}',event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 p-6 flex flex-col justify-end"><p class="text-white text-[10px] font-medium line-clamp-2 uppercase tracking-wider">${data.prompt || 'Online Image'}</p></div>`;
+        }
+
+        function failPendingCard(batchId, index){
+            const id = `pending-${batchId}-${index}`;
+            const card = document.getElementById(id);
+            if(!card) return;
+            stopCardProgress(id);
+            card.innerHTML = '<div class="card-pending"><span class="pct-text" style="color:#ef4444">失败</span></div>';
+            setTimeout(() => card.remove(), 3000);
+        }
+
+        let progressTimer = null;
+        let progressValue = 0;
+
+        function startProgressAnimation() {
+            stopProgressAnimation();
+            progressValue = 0;
+            const fill = document.getElementById('progressFill');
+            const text = document.getElementById('progressText');
+            const status = document.getElementById('progressStatus');
+            const circumference = 226;
+            fill.style.strokeDashoffset = circumference;
+            text.textContent = '0%';
+            status.textContent = '正在请求...';
+            progressTimer = setInterval(() => {
+                if (progressValue < 95) {
+                    progressValue = Math.min(95, progressValue + (95 - progressValue) / 20 + 0.3);
+                    const offset = circumference * (1 - progressValue / 100);
+                    fill.style.strokeDashoffset = offset;
+                    text.textContent = Math.round(progressValue) + '%';
+                }
+            }, 350);
+        }
+
+        function stopProgressAnimation() {
+            if (progressTimer) {
+                clearInterval(progressTimer);
+                progressTimer = null;
+            }
+            progressValue = 100;
+            const fill = document.getElementById('progressFill');
+            const text = document.getElementById('progressText');
+            const status = document.getElementById('progressStatus');
+            if (fill) fill.style.strokeDashoffset = 0;
+            if (text) text.textContent = '100%';
+            if (status) status.textContent = '完成';
+        }
+
+        async function downloadImage() {
+            const img = document.getElementById('outputImg');
+            if (!img.src) return;
+            try {
+                const response = await fetch(img.src);
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `online_${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error('下载失败:', e);
+                window.open(img.src, '_blank');
+            }
+        }
+
+        function renderImageCard(data, isNew=false){
+            if(!data.images?.[0] || document.getElementById(`history-${data.timestamp}`)) return;
+            const card = document.createElement('div');
+            card.id = `history-${data.timestamp}`;
+            card.className = 'masonry-item group relative cursor-zoom-in';
+            card.onclick = () => openLightbox(data.images[0], allHistory.map(h => h.images[0]), allHistory.indexOf(data));
+            card.innerHTML = `<img src="${data.images[0]}" class="w-full h-full object-cover block group-hover:scale-105 transition-transform duration-1000" loading="lazy">
+                <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 z-10">
+                    <button onclick="backfillParams('${data.timestamp}',event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors" title="参数回填">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v.5"/></svg>
+                    </button>
+                    <button onclick="processRemoveBg('${data.images[0]}','${data.timestamp}',event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors" title="去除背景">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    </button>
+                    <button onclick="saveToAssetLibrary('${data.images[0]}',event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors" title="保存到资产库">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v6"/><path d="M9 13h6"/><path d="M22 20v-8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2a2 2 0 0 0-1.66-.9H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2Z"/></svg>
+                    </button>
+                    <button onclick="downloadHistoryImage('${data.images[0]}',event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </button>
+                    <button onclick="deleteHistoryItem('${data.timestamp}',event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 p-6 flex flex-col justify-end"><p class="text-white text-[10px] font-medium line-clamp-2 uppercase tracking-wider">${data.prompt || 'Online Image'}</p></div>`;
+            isNew ? document.getElementById('masonry').prepend(card) : document.getElementById('masonry').appendChild(card);
+            lucide.createIcons();
+        }
+        async function loadHistory(page=0){
+            if(isLoading) return; isLoading = true;
+            const loader = document.getElementById('loadMoreTrigger');
+            if(page === 0){ loader.innerText = 'Loading Archives...'; allHistory = await fetch('/api/history?type=online').then(r=>r.json()); document.getElementById('masonry').innerHTML=''; currentIndex=0; }
+            const next = allHistory.slice(currentIndex, currentIndex + PAGE_SIZE);
+            next.forEach(item => renderImageCard(item)); currentIndex += next.length;
+            loader.classList.toggle('hidden', currentIndex >= allHistory.length);
+            loader.innerText = 'Load More Archive'; isLoading = false;
+        }
+        function openLightbox(url, images = null, startIndex = 0) {
+            if (images && images.length > 1) {
+                ImageViewer.init(images, startIndex);
+            } else {
+                ImageViewer.init([url], 0);
+                document.getElementById('lightboxPrevBtn').style.display = 'none';
+                document.getElementById('lightboxNextBtn').style.display = 'none';
+            }
+        }
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.add('hidden');
+            document.body.style.overflow = '';
+            setTimeout(() => {
+                document.getElementById('lightboxImg').src = '';
+            }, 300);
+        }
+        function handleOutsideClick(e) { if (e.target.id === 'lightbox') closeLightbox(); }
+        function zoomImage() { if (currentResult) openLightbox(currentResult.images[0]); }
+
+        async function downloadLightboxImage() {
+            const img = document.getElementById('lightboxImg');
+            if (!img.src) return;
+            try {
+                const response = await fetch(img.src);
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `online_${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error('下载失败:', e);
+                window.open(img.src, '_blank');
+            }
+        }
+
+        async function downloadHistoryImage(url, ev) {
+            ev.stopPropagation();
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const dlUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = dlUrl;
+                a.download = `online_${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(dlUrl);
+            } catch (e) {
+                console.error('下载失败:', e);
+                window.open(url, '_blank');
+            }
+        }
+
+        async function processRemoveBg(imageUrl, timestamp, ev) {
+            ev.stopPropagation();
+            if (!window.jiandanBeijing) {
+                alert('简单去背景模块未加载');
+                return;
+            }
+            const card = document.getElementById(`history-${timestamp}`);
+            if (card) card.style.opacity = '0.5';
+            try {
+                const resultUrl = await window.jiandanBeijing.removeBackground(imageUrl);
+                const saveRes = await fetch('/api/history/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: '去除背景',
+                        images: [resultUrl],
+                        type: 'online'
+                    })
+                });
+                const saveData = await saveRes.json();
+                if (saveData.success) {
+                    const newData = { images: [resultUrl], prompt: '去除背景', timestamp: saveData.timestamp };
+                    allHistory.unshift(newData);
+                    renderImageCard(newData, true);
+                }
+            } catch (err) {
+                console.error('[去除背景] 失败:', err);
+                alert(`去除背景失败: ${err.message}`);
+            } finally {
+                if (card) card.style.opacity = '';
+            }
+        }
+
+        async function saveToAssetLibrary(imageUrl, ev) {
+            ev.stopPropagation();
+            try {
+                const res = await fetch('/api/user/assets/save-from-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: imageUrl })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    if (res.status === 401) { alert('请先登录后再保存到资产库'); return; }
+                    throw new Error(err.detail || '保存失败');
+                }
+                const data = await res.json();
+                console.log('[资产库] 已保存:', data.url);
+                alert('已保存到资产库');
+            } catch (err) {
+                console.error('[资产库] 保存失败:', err);
+                alert(`保存到资产库失败: ${err.message}`);
+            }
+        }
+
+        function applySameStyle(){
+            if(!currentLightboxData) return;
+            document.getElementById('promptInput').value = currentLightboxData.prompt || '';
+            [1,2,3].forEach(id => clearSlot(id));
+            (currentLightboxData.params?.reference_images || []).slice(0,3).forEach((ref,i) => {
+                refs[i+1] = ref; const prev = document.getElementById(`prev${i+1}`);
+                prev.src = ref.url; prev.classList.remove('hidden'); document.getElementById(`del${i+1}`).classList.remove('hidden');
+            });
+            const size = currentLightboxData.params?.size || '1024x1024';
+            const matchedRatio = Object.keys(SIZE_OPTIONS).find(key => SIZE_OPTIONS[key].some(([value]) => value === size)) || 'square';
+            setRatio(matchedRatio, size);
+            closeLightbox(); window.scrollTo({top:0, behavior:'smooth'});
+        }
+        function backfillParams(timestamp, ev){
+            ev.stopPropagation();
+            const data = allHistory.find(h => String(h.timestamp) === String(timestamp));
+            if(!data) return;
+            if(data.prompt) document.getElementById('promptInput').value = data.prompt;
+            [1,2,3].forEach(id => clearSlot(id));
+            (data.params?.reference_images || []).slice(0,3).forEach((ref,i) => {
+                refs[i+1] = ref;
+                const prev = document.getElementById(`prev${i+1}`);
+                prev.src = ref.url;
+                prev.classList.remove('hidden');
+                document.getElementById(`del${i+1}`).classList.remove('hidden');
+                document.getElementById(`edit${i+1}`).classList.remove('hidden');
+            });
+            if(data.params?.size){
+                const size = data.params.size;
+                const matchedRatio = Object.keys(SIZE_OPTIONS).find(key => SIZE_OPTIONS[key].some(([value]) => value === size)) || 'square';
+                setRatio(matchedRatio, size);
+            }
+            window.scrollTo({top:0, behavior:'smooth'});
+        }
+        async function deleteHistoryItem(ts, ev){
+            ev.stopPropagation();
+            const card = document.getElementById(`history-${ts}`);
+            if(!card) return;
+            if(card.querySelector('.delete-confirm')) return;
+            const confirm = document.createElement('div');
+            confirm.className = 'delete-confirm absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-white/95 backdrop-blur-sm rounded-2xl';
+            confirm.innerHTML = `
+                <span class="text-sm font-bold text-gray-700">确认删除？</span>
+                <div class="flex gap-2">
+                    <button class="confirm-yes px-5 py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors">删除</button>
+                    <button class="confirm-no px-5 py-2 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors">取消</button>
+                </div>`;
+            card.appendChild(confirm);
+            confirm.querySelector('.confirm-yes').onclick = async e => {
+                e.stopPropagation();
+                const res = await fetch('/api/history/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({timestamp:ts})}).then(r=>r.json());
+                if(res.success) card.remove();
+            };
+            confirm.querySelector('.confirm-no').onclick = e => { e.stopPropagation(); confirm.remove(); };
+        }
+        const observer = new IntersectionObserver(entries => { if(entries[0].isIntersecting && currentIndex < allHistory.length) loadHistory(1); }, {threshold:.1});
+        window.onload = async () => { setRatio('square'); setResolution('1k'); await initModels(); await loadHistory(0); observer.observe(document.getElementById('loadMoreTrigger')); document.getElementById('loadMoreTrigger').onclick = () => loadHistory(1); };
+
+        const PRESET_CATEGORIES = {
+            image_quality: { name: '画面质量', icon: '◆', items: ['极高画质','极致细节','2K超清','4K超清','8K超清','高质量','普通质量'] },
+            aspect_ratio: { name: '画面比例', icon: '▭', items: ['1:1','3:2','4:3','16:9','16:10','2.35:1','9:16'] },
+            style: { name: '风格', icon: '✦', items: ['赛博朋克','蒸汽波','极简主义','超现实主义','印象派','波普艺术','复古风格','未来主义','暗黑风格','小清新','写实风格','卡通风格','油画风格','水彩风格','像素艺术','3D渲染'] },
+            lighting: { name: '光源', icon: '☀', items: ['自然光','侧光','逆光','顶光','底光','柔光','硬光','环形光','轮廓光','戏剧性光影','体积光','霓虹灯光','烛光','月光','日光'] },
+            time: { name: '时间', icon: '◷', items: ['清晨','日出','上午','正午','下午','黄昏','日落','夜晚','深夜','黄金时刻','蓝色时刻','午夜'] },
+            composition: { name: '构图', icon: '▦', items: ['三分法','中心构图','对称构图','对角线构图','框架式构图','引导线构图','留白','黄金比例','前景构图','透视构图','重复构图','对比构图'] },
+            color: { name: '色彩', icon: '●', items: ['高饱和度','低饱和度','暖色调','冷色调','单色调','对比色','互补色','莫兰迪色','马卡龙色','黑白色调','复古色调','赛博朋克色调','霓虹色','渐变色'] },
+            lens: { name: '镜头', icon: '◎', items: ['广角镜头','长焦镜头','微距镜头','鱼眼镜头','标准镜头','移轴镜头','航拍镜头','红外镜头'] },
+            shot_type: { name: '景别', icon: '▣', items: ['特写','近景','中景','全景','远景','大远景','半身像','全身像','头像','细节特写'] },
+            shooting_angle: { name: '拍摄角度', icon: '◉', items: ['平视','俯视','仰视','鸟瞰','低角度','45度角','侧面','背面','正面','倾斜视角','第一人称视角','虫瞰视角'] },
+            effect: { name: '特效', icon: '✧', items: ['景深','运动模糊','光晕','粒子效果','双重曝光','HDR','镜头光斑','动态模糊','胶片颗粒','散景','色差','暗角'] },
+            movement_param: { name: '运镜方式', icon: '⇢', items: ['推镜头','拉镜头','摇镜头','移镜头','跟拍','环绕拍摄','升降拍摄','变焦','跟随','固定镜头'] }
+        };
+
+        function togglePresetPanel() {
+            const panel = document.getElementById('presetPanel');
+            panel.classList.toggle('open');
+        }
+
+        function closePresetPanel() {
+            document.getElementById('presetPanel').classList.remove('open');
+        }
+
+        function buildPresetPanel() {
+            const body = document.getElementById('presetBody');
+            let html = '';
+            for (const [key, cat] of Object.entries(PRESET_CATEGORIES)) {
+                html += `<div class="preset-category">
+                    <div class="preset-category-title">${cat.icon}<span>${cat.name}</span></div>
+                    <div class="preset-grid">`;
+                cat.items.forEach(item => {
+                    html += `<button class="preset-btn" data-category="${key}" onclick="this.classList.toggle('active')">${item}</button>`;
+                });
+                html += `</div></div>`;
+            }
+            body.innerHTML = html;
+        }
+
+        function applyPresets() {
+            const selected = {};
+            document.querySelectorAll('.preset-btn.active').forEach(btn => {
+                const cat = btn.dataset.category;
+                if (!selected[cat]) selected[cat] = [];
+                selected[cat].push(btn.textContent.trim());
+            });
+            let prompt = '';
+            for (const [cat, items] of Object.entries(selected)) {
+                const catName = PRESET_CATEGORIES[cat].name;
+                prompt += `${catName}: ${items.join('，')}；\n`;
+            }
+            const input = document.getElementById('promptInput');
+            if (prompt) {
+                input.value = prompt.trim();
+            }
+            closePresetPanel();
+        }
+
+        function clearPresets() {
+            document.querySelectorAll('.preset-btn.active').forEach(btn => btn.classList.remove('active'));
+        }
+
+        function applyFullBodyPrompt() {
+            document.getElementById('promptInput').value = '基于[上传图像]中的人物，生成一张全身正面参考照片。人物从头到脚完整可见，站立姿势，面朝相机。背景是纯净的白色摄影棚无缝背景。光线均匀、细节清晰的高分辨率照片。人物的服装和特征应与参考图完全一致。纵向构图。(风格和参考图风格保持一致）';
+        }
+
+        function applyThreeViewPrompt() {
+            document.getElementById('promptInput').value = '提取图片中的角色，**请参考图中的角色，模仿人物设定图生成一张这个人的人物设定规范图的页面。画面布局:左侧为角色头部大特写(占据画布左半部分)，右侧并列展示角色的正面全身、侧面全身、背面全身三视图(三图紧凑排列在右半部分)，整体画布为横向构图，纯白背景，各视图之间无重叠、边界清晰';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadConfig();
+            buildPresetPanel();
+        });
+    </script>
+
+    <div id="presetPanel" class="preset-overlay">
+        <div class="preset-panel">
+            <div class="preset-header">
+                <div class="preset-title">
+                    <span style="font-size:18px;">✦</span>
+                    <span>提示词预设</span>
+                </div>
+                <button onclick="closePresetPanel()" class="preset-close">&times;</button>
+            </div>
+            <div id="presetBody" class="preset-body"></div>
+            <div class="preset-footer">
+                <button onclick="clearPresets()" class="preset-clear-btn">清空选择</button>
+                <button onclick="applyPresets()" class="preset-apply-btn">应用到 Prompt</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

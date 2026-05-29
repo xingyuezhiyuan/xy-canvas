@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/logo.png" type="image/png">
+    <title>2D风格细化</title>
+    <script src="/static/modules/auth-token.js?v=20260525001"></script>
+    <link rel="stylesheet" href="/static/tailwind.min.css?v=20260521025">
+    <script src="/static/lucide.min.js?v=20260521025"></script>
+    <script src="/static/theme.js?v=20260521025"></script>
+    <script src="/static/modules/image-viewer.js?v=20260521006"></script>
+    <style>
+        :root { --bg-base: #f0f4fa; --text-main: #0a1628; --max-w: 1280px; --easing: cubic-bezier(0.4, 0, 0.2, 1); --accent: #00b4d8; }
+        *::-webkit-scrollbar { width: 10px !important; height: 10px !important; background: transparent !important; }
+        *::-webkit-scrollbar-track { background: transparent !important; border: none !important; }
+        *::-webkit-scrollbar-thumb { background-color: #d8d8d8 !important; border: 3px solid transparent !important; border-right-width: 5px !important; background-clip: padding-box !important; border-radius: 10px !important; }
+        * { scrollbar-width: thin !important; scrollbar-color: #d8d8d8 transparent !important; }
+        body { background-color: var(--bg-base); font-family: "Inter", -apple-system, "PingFang SC", sans-serif; color: var(--text-main); -webkit-font-smoothing: antialiased; }
+        .layout-container { max-width: var(--max-w); margin: 0 auto; padding: 0 40px; }
+        .console-card { background: #ffffff; border: 1px solid rgba(0, 0, 0, 0.08); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02); }
+        .theme-dark .console-card { background: #0d1520; border-color: rgba(0, 240, 255, 0.12); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); }
+        .theme-dark .bg-gray-50\/50 { background: rgba(13, 21, 32, 0.5) !important; }
+        .theme-dark .bg-white { background: #0d1520 !important; }
+        .theme-dark .gallery-lightbox { background: rgba(10, 14, 23, 0.99); }
+        .theme-dark .border-gray-100 { border-color: rgba(0, 240, 255, 0.1) !important; }
+        .theme-dark .text-gray-700 { color: #c8d6e5 !important; }
+        .theme-dark .masonry-item { background: #111d2a; border-color: rgba(0, 240, 255, 0.08); }
+        .theme-dark .bg-gray-100 { background: #1a2a3a !important; }
+        .upload-zone { border: 2px dashed rgba(128, 128, 128, 0.3); border-radius: 24px; padding: 3rem 2rem; min-height: 200px; text-align: center; cursor: pointer; transition: 0.3s; background: transparent; }
+        .upload-zone:hover { border-color: var(--accent); background: rgba(0, 180, 216, 0.05); }
+        .upload-zone.dragover { border-color: var(--accent); background: rgba(0, 180, 216, 0.08); }
+        .theme-dark .upload-zone { border-color: rgba(255, 255, 255, 0.15); }
+        .theme-dark .upload-zone:hover { border-color: var(--accent); background: rgba(0, 240, 255, 0.08); }
+        .preview-image { max-width: 100%; max-height: 300px; border-radius: 16px; display: none; margin-top: 15px; object-fit: contain; }
+        .preview-image.active { display: block; }
+        .masonry-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        @media (min-width: 768px) { .masonry-grid { grid-template-columns: repeat(4, 1fr); } }
+        .masonry-item { aspect-ratio: 1 / 1; border-radius: 24px; overflow: hidden; background: #eee; border: 1px solid #f1f5f9; transition: all 0.5s var(--easing); position: relative; cursor: zoom-in; }
+        .masonry-item:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08); }
+        .gallery-lightbox { background: rgba(255, 255, 255, 0.99); }
+        .gallery-lightbox:hover #lightboxPrevBtn:not([style*="display: none"]) { opacity: 1 !important; pointer-events: auto !important; }
+        .gallery-lightbox:hover #lightboxNextBtn:not([style*="display: none"]) { opacity: 1 !important; pointer-events: auto !important; }
+        .btn-render { background: #000; color: #fff; transition: all 0.3s ease; }
+        .btn-render:disabled { background: #ccc; cursor: not-allowed; }
+        input::-webkit-inner-spin-button { display: none; }
+        .form-select {
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #374151;
+            outline: none;
+            width: 100%;
+            cursor: pointer;
+        }
+        .theme-dark .form-select { background: #1a2a3a; border-color: rgba(0, 240, 255, 0.15); color: #c8d6e5; }
+        .form-select:focus { border-color: #00b4d8; box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15); }
+        .btn-2d-glow {
+            background: linear-gradient(135deg, #00c9a7, #00b4d8);
+            color: #fff;
+            border: none;
+            box-shadow: 0 0 15px rgba(0, 201, 167, 0.3), 0 0 30px rgba(0, 180, 216, 0.15);
+            transition: all 0.3s ease;
+        }
+        .btn-2d-glow:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(0, 201, 167, 0.5), 0 0 40px rgba(0, 180, 216, 0.3);
+        }
+        .btn-2d-glow:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .progress-inline {
+            display: none;
+            margin-top: 16px;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(0, 201, 167, 0.06), rgba(0, 180, 216, 0.04));
+            border-radius: 14px;
+            border: 1px solid rgba(0, 201, 167, 0.15);
+        }
+        .progress-inline.active { display: block; }
+        .theme-dark .progress-inline {
+            background: linear-gradient(135deg, rgba(0, 201, 167, 0.1), rgba(0, 180, 216, 0.06));
+            border-color: rgba(0, 201, 167, 0.2);
+        }
+        .progress-bar-wrap { display: flex; align-items: center; gap: 14px; }
+        .progress-bar-track {
+            flex: 1; height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; position: relative;
+        }
+        .theme-dark .progress-bar-track { background: #1a2a3a; }
+        .progress-bar-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #00c9a7, #00b4d8);
+            border-radius: 999px; transition: width 0.3s ease; position: relative;
+            box-shadow: 0 0 12px rgba(0, 201, 167, 0.6), 0 0 4px rgba(0, 180, 216, 0.4);
+        }
+        .progress-bar-fill::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
+            animation: progressShimmer 1.2s infinite;
+        }
+        @keyframes progressShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        .progress-bar-percent {
+            font-size: 13px; font-weight: 700; color: #00c9a7; min-width: 42px; text-align: right; font-variant-numeric: tabular-nums;
+        }
+        .progress-bar-status { margin-top: 8px; font-size: 10px; font-weight: 600; color: #9ca3af; letter-spacing: 0.02em; }
+        .theme-dark .progress-bar-status { color: #6b7280; }
+    </style>
+    <link rel="stylesheet" href="/static/theme.css?v=20260511-cyberpunk-cyan">
+</head>
+<body class="antialiased">
+    <header class="pt-20 pb-12">
+        <div class="layout-container">
+            <div class="console-card rounded-3xl p-1.5">
+                <div class="bg-gray-50/50 rounded-[22px] p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <span class="text-[16px] font-bold text-gray-400 uppercase tracking-widest">2D风格细化</span>
+                        <div id="statusDot" class="flex items-center gap-2">
+                            <span id="statusText" class="text-[16px] font-bold text-gray-500 uppercase">System Ready</span>
+                            <div id="dotColor" class="w-1.5 h-1.5 bg-black rounded-full"></div>
+                        </div>
+                    </div>
+                    <textarea id="prompt" rows="2" class="w-full bg-transparent text-2xl font-medium outline-none placeholder:text-gray-200 text-black resize-none leading-relaxed" placeholder="无需输入提示词即可运行，有特定需求输入即可"></textarea>
+                </div>
+                <div class="flex flex-col md:flex-row items-center justify-between p-4 px-6 gap-6">
+                    <div class="flex items-center gap-8 flex-wrap">
+                        <div class="flex flex-col">
+                            <span class="text-[16px] font-bold text-gray-400 uppercase mb-1">上传图像</span>
+                            <div class="upload-zone" id="uploadZone">
+                                <div class="text-3xl mb-2">📷</div>
+                                <div class="text-[11px] font-bold text-gray-400 uppercase">点击、拖拽或 Ctrl+V 上传</div>
+                                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                                <img class="preview-image" id="preview" alt="图像预览">
+                            </div>
+                        </div>
+                        <div class="h-8 w-px bg-gray-100"></div>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex flex-col">
+                                <span class="text-[16px] font-bold text-gray-400 uppercase mb-1">目标尺寸</span>
+                                <input id="sizeInput" type="number" value="1536" min="512" max="4096" step="64" class="w-20 bg-transparent outline-none border-b border-transparent focus:border-black text-xs font-bold">
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-[16px] font-bold text-gray-400 uppercase mb-1">随机种子</span>
+                                <div class="flex items-center gap-2">
+                                    <input id="seedInput" type="number" value="313602191412550" min="0" max="999999999999999" class="w-24 bg-transparent outline-none border-b border-transparent focus:border-black text-xs font-bold">
+                                    <button onclick="randomizeSeed()" class="text-[10px] text-gray-400 hover:text-black">🎲</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="mainGenBtn" onclick="handleRender()" class="w-full md:w-56 h-12 btn-2d-glow rounded-xl font-bold text-[13px] flex items-center justify-center" disabled>
+                        <span id="btnText">2D风格细化</span>
+                    </button>
+                    <div id="progressInline" class="progress-inline">
+                        <div class="progress-bar-wrap">
+                            <div class="progress-bar-track">
+                                <div id="progressFill" class="progress-bar-fill"></div>
+                            </div>
+                            <span id="progressPercent" class="progress-bar-percent">0%</span>
+                        </div>
+                        <div id="progressStatus" class="progress-bar-status">准备中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="pb-24">
+        <div class="layout-container">
+            <div id="masonry" class="masonry-grid"></div>
+            <div id="loadMoreTrigger" class="py-12 text-center text-gray-300 text-[10px] font-bold uppercase tracking-widest cursor-pointer hidden">Load More Archive</div>
+        </div>
+    </main>
+    <div id="lightbox" onclick="handleOutsideClick(event)" class="hidden fixed inset-0 z-50 gallery-lightbox flex flex-col items-center justify-center p-8 overflow-auto">
+        <button onclick="closeLightbox()" class="absolute top-10 right-10 text-gray-400 hover:text-black"><i data-lucide="x" class="w-8 h-8"></i></button>
+        <button id="lightboxPrevBtn" onclick="ImageViewer.prevImage()" class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all opacity-0 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </button>
+        <button id="lightboxNextBtn" onclick="ImageViewer.nextImage()" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all opacity-0 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m9 18 6-6-6-6"/>
+            </svg>
+        </button>
+        <div class="max-w-5xl w-full flex flex-col items-center pointer-events-none">
+            <div class="relative pointer-events-auto">
+                <img id="lightboxImg" src="" class="max-h-[85vh] rounded-lg shadow-xl">
+                <div class="absolute top-6 left-6 bg-black/50 backdrop-blur-md text-white px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest shadow-2xl"><span id="lightboxRes">0x0</span></div>
+                <button onclick="downloadImage()" class="absolute top-6 right-6 bg-black text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl hover:scale-105 transition-transform"><i data-lucide="download" class="w-5 h-5"></i></button>
+            </div>
+        </div>
+    </div>
+    <script>
+        lucide.createIcons();
+
+        const _isLocalAccess = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+        let COMFYUI_SERVER = 'http://127.0.0.1:8188';
+        let IS_LOCAL_SERVER = _isLocalAccess;
+
+        const WORKFLOW_CONFIG = {
+            name: "2D风格细化",
+            type: "2dstyle",
+            workflow: {
+                "76": { "inputs": { "image": "uploaded_image.png" }, "class_type": "LoadImage", "_meta": { "title": "加载图像" } },
+                "122": { "inputs": { "sampler_name": "euler" }, "class_type": "KSamplerSelect", "_meta": { "title": "K采样器选择" } },
+                "123": { "inputs": { "noise": ["125", 0], "guider": ["137", 0], "sampler": ["122", 0], "sigmas": ["146", 0], "latent_image": ["148", 0] }, "class_type": "SamplerCustomAdvanced", "_meta": { "title": "自定义采样器(高级)" } },
+                "124": { "inputs": { "samples": ["123", 0], "vae": ["127", 0] }, "class_type": "VAEDecode", "_meta": { "title": "VAE解码" } },
+                "125": { "inputs": { "noise_seed": 313602191412550 }, "class_type": "RandomNoise", "_meta": { "title": "随机噪波" } },
+                "126": { "inputs": { "unet_name": "Flux2-Klein-9B-True-v2-fp8mixed.safetensors", "weight_dtype": "default" }, "class_type": "UNETLoader", "_meta": { "title": "UNET加载器" } },
+                "127": { "inputs": { "vae_name": "flux2-vae.safetensors" }, "class_type": "VAELoader", "_meta": { "title": "加载VAE" } },
+                "133": { "inputs": { "clip_name": "qwen_3_8b_fp8mixed.safetensors", "type": "flux2", "device": "default" }, "class_type": "CLIPLoader", "_meta": { "title": "加载CLIP" } },
+                "135": { "inputs": { "text": "把图像改成xy风格，最佳画质", "嵌入提示词": null, "clip": ["188", 1] }, "class_type": "CLIPTextEncode", "_meta": { "title": "CLIP Text Encode (Positive Prompt)" } },
+                "136": { "inputs": { "text": "", "嵌入提示词": null, "clip": ["188", 1] }, "class_type": "CLIPTextEncode", "_meta": { "title": "CLIP Text Encode ( Negative Prompt)" } },
+                "137": { "inputs": { "cfg": 1, "model": ["188", 0], "positive": ["141", 0], "negative": ["139", 0] }, "class_type": "CFGGuider", "_meta": { "title": "CFG引导" } },
+                "139": { "inputs": { "conditioning": ["136", 0], "latent": ["140", 0] }, "class_type": "ReferenceLatent", "_meta": { "title": "参考Latent" } },
+                "140": { "inputs": { "pixels": ["173", 0], "vae": ["127", 0] }, "class_type": "VAEEncode", "_meta": { "title": "VAE编码" } },
+                "141": { "inputs": { "conditioning": ["135", 0], "latent": ["140", 0] }, "class_type": "ReferenceLatent", "_meta": { "title": "参考Latent" } },
+                "146": { "inputs": { "steps": 6, "width": ["147", 0], "height": ["147", 1] }, "class_type": "Flux2Scheduler", "_meta": { "title": "Flux2代 调度器" } },
+                "147": { "inputs": { "image": ["173", 0] }, "class_type": "easy imageSize", "_meta": { "title": "图像尺寸" } },
+                "148": { "inputs": { "width": ["147", 0], "height": ["147", 1], "batch_size": 1 }, "class_type": "EmptyFlux2LatentImage", "_meta": { "title": "Flux2代 空Latent" } },
+                "173": { "inputs": { "target_size": ["183", 0], "resolution_multiple": 32, "upscale_method": "lanczos", "resize_and_pad": true, "input_image": ["76", 0] }, "class_type": "DINKI_Resize_And_Pad", "_meta": { "title": "调整大小并填充" } },
+                "174": { "inputs": { "remove_pad": true, "latent_scale": 0, "input_image": ["124", 0], "pad_info": ["173", 1] }, "class_type": "DINKI_Remove_Pad_From_Image", "_meta": { "title": "移除图像填充" } },
+                "183": { "inputs": { "value": 1536 }, "class_type": "PrimitiveInt", "_meta": { "title": "整数" } },
+                "185": { "inputs": { "custom_path": "", "filename_prefix": "comfyui", "timestamp": "None", "format": "png", "quality": 80, "meta_data": false, "blind_watermark": "", "save_workflow_as_json": false, "preview": true, "images": ["174", 0] }, "class_type": "LayerUtility: SaveImagePlus", "_meta": { "title": "图层工具：保存图像增强版(高级)" } },
+                "188": { "inputs": { "lora_name": "2dstyle-lora.safetensors", "key": "139749", "strength_model": 1, "strength_clip": 1, "model": ["126", 0], "clip": ["133", 0] }, "class_type": "LmcqRuntimeLoraDecryption", "_meta": { "title": "Lmcq Runtime Lora Decryption" } }
+            },
+            nodeMappings: {
+                "76": { param: "image", label: "输入图像", type: "upload" },
+                "183": { param: "value", label: "目标尺寸", type: "number" },
+                "125": { param: "noise_seed", label: "随机种子", type: "number" }
+            },
+            apiEndpoint: "/api/generate"
+        };
+
+        function generateUUID() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) { try { return crypto.randomUUID(); } catch (e) { } }
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        const CLIENT_ID = localStorage.getItem("client_id") || generateUUID();
+        localStorage.setItem("client_id", CLIENT_ID);
+
+        async function loadConfig() {
+            const localConfig = localStorage.getItem('comfyui_config');
+            if (localConfig) {
+                try {
+                    const config = JSON.parse(localConfig);
+                    const activeServer = config.active_server || '本地服务器';
+                    IS_LOCAL_SERVER = (activeServer === '本地服务器');
+                    if (activeServer === '云端服务器' && config.cloud_address) {
+                        COMFYUI_SERVER = (config.cloud_address.startsWith('http') ? config.cloud_address : `https://${config.cloud_address}`).replace(/\/+$/, '');
+                    } else if (config.local_address) {
+                        COMFYUI_SERVER = (config.local_address.startsWith('http') ? config.local_address : `http://${config.local_address}`).replace(/\/+$/, '');
+                    }
+                    return;
+                } catch (e) {
+                    console.error('解析本地配置失败:', e);
+                }
+            }
+        }
+
+        let allHistory = [];
+        let currentIndex = 0;
+        const PAGE_SIZE = 15;
+        let isLoading = false;
+        let uploadedImageName = null;
+        let currentPromptId = null;
+        let isGenerating = false;
+        let comfyWs = null;
+
+        const backendSocket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/stats?client_id=${CLIENT_ID}`);
+        backendSocket.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                if (msg.type === 'new_image' && msg.data?.type === '2dstyle') {
+                    if (!document.getElementById(`history-${msg.data.timestamp}`)) {
+                        allHistory.unshift(msg.data);
+                        renderImageCard(msg.data, true);
+                        currentIndex++;
+                    }
+                }
+            } catch (err) { }
+        };
+
+        async function apiFetch(url, options = {}) {
+            if (IS_LOCAL_SERVER) {
+                const directUrl = COMFYUI_SERVER + url;
+                const response = await fetch(directUrl, options);
+                return response;
+            }
+            const headers = {
+                'X-ComfyUI-Server-Url': COMFYUI_SERVER,
+                ...(options.headers || {})
+            };
+            const response = await fetch(url, { ...options, headers });
+            return response;
+        }
+
+        function buildWsUrl() {
+            if (IS_LOCAL_SERVER) {
+                let baseUrl = COMFYUI_SERVER.replace(/\/+$/, '');
+                let wsProtocol = baseUrl.startsWith('https://') ? 'wss' : 'ws';
+                return `${wsProtocol}://${baseUrl.replace(/^https?:\/\//, '')}/ws?clientId=${CLIENT_ID}`;
+            }
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return `${protocol}//${window.location.host}/api/comfyui/ws?clientId=${CLIENT_ID}`;
+        }
+
+        function connectComfyUIWebSocket() {
+            const wsUrl = buildWsUrl();
+            try {
+                comfyWs = new WebSocket(wsUrl);
+                comfyWs.onopen = () => {
+                    console.log('[ComfyUI WS] 已连接');
+                };
+                comfyWs.onmessage = (event) => {
+                    try {
+                        if (typeof event.data !== 'string') return;
+                        const message = JSON.parse(event.data);
+                        if (message.type === 'progress' && isGenerating) {
+                            const data = message.data;
+                            updateRealProgress({
+                                type: 'comfyui_progress',
+                                status: 'sampling',
+                                value: data.value || 0,
+                                max: data.max || 1,
+                                node: data.node || ''
+                            });
+                        } else if (message.type === 'executing' && isGenerating) {
+                            const data = message.data;
+                            if (data.node === null) {
+                                updateRealProgress({
+                                    type: 'comfyui_progress',
+                                    status: 'done',
+                                    value: 1,
+                                    max: 1,
+                                    node: ''
+                                });
+                            } else {
+                                updateRealProgress({
+                                    type: 'comfyui_progress',
+                                    status: 'executing',
+                                    value: 0,
+                                    max: 1,
+                                    node: data.node || ''
+                                });
+                            }
+                        } else if (message.type === 'execution_start' && isGenerating) {
+                            updateRealProgress({
+                                type: 'comfyui_progress',
+                                status: 'started',
+                                value: 0,
+                                max: 1,
+                                node: ''
+                            });
+                        } else if (message.type === 'execution_cached' && isGenerating) {
+                            updateRealProgress({
+                                type: 'comfyui_progress',
+                                status: 'cached',
+                                value: 0,
+                                max: 1,
+                                node: 'cached'
+                            });
+                        }
+                    } catch (err) { }
+                };
+                comfyWs.onerror = (err) => {
+                    console.log('[ComfyUI WS] 连接错误:', err);
+                };
+            } catch (err) {
+                console.log('[ComfyUI WS] 创建失败:', err);
+            }
+        }
+
+        connectComfyUIWebSocket();
+
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const promptInput = document.getElementById('prompt');
+        const sizeInput = document.getElementById('sizeInput');
+        const seedInput = document.getElementById('seedInput');
+        const mainGenBtn = document.getElementById('mainGenBtn');
+
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) handleFileUpload(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleFileUpload(e.target.files[0]); });
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.startsWith('image/')) {
+                    const file = items[i].getAsFile();
+                    if (file) { e.preventDefault(); handleFileUpload(file); return; }
+                }
+            }
+        });
+
+        async function handleFileUpload(file) {
+            if (!file.type.startsWith('image/')) return alert('请上传图片文件');
+            const reader = new FileReader();
+            reader.onload = (e) => { preview.src = e.target.result; preview.classList.add('active'); };
+            reader.readAsDataURL(file);
+            const formData = new FormData();
+            formData.append('files', file);
+            try {
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.files?.length > 0) {
+                    uploadedImageName = data.files[0].comfy_name;
+                    updateGenButtonState();
+                    setStatus('Image uploaded');
+                }
+            } catch (e) { alert('上传失败'); }
+        }
+
+        function updateGenButtonState() {
+            mainGenBtn.disabled = !uploadedImageName;
+        }
+        function randomizeSeed() { seedInput.value = Math.floor(Math.random() * 1000000000000000); }
+        function setStatus(text) {
+            document.getElementById("statusText").innerText = text;
+            document.getElementById("dotColor").className = "w-1.5 h-1.5 bg-black rounded-full";
+        }
+
+        async function checkServerConnection() {
+            try {
+                const statsUrl = IS_LOCAL_SERVER ? '/system_stats' : '/api/comfyui/system_stats';
+                const response = await apiFetch(statsUrl);
+                if (response.ok) {
+                    document.getElementById("statusText").innerText = "System Ready";
+                    document.getElementById("dotColor").className = "w-1.5 h-1.5 bg-green-500 rounded-full";
+                } else {
+                    throw new Error('Server not responding');
+                }
+            } catch (e) {
+                document.getElementById("statusText").innerText = "System Offline";
+                document.getElementById("dotColor").className = "w-1.5 h-1.5 bg-red-500 rounded-full";
+            }
+        }
+
+        async function handleRender() {
+            if (!uploadedImageName) return alert("请先上传图像");
+            isGenerating = true;
+            startProgress();
+            setLoading(true);
+            const placeholder = createPlaceholder("2D 风格细化");
+            document.getElementById('masonry').prepend(placeholder);
+            try {
+                const workflowData = JSON.parse(JSON.stringify(WORKFLOW_CONFIG.workflow));
+                const promptText = promptInput.value.trim() || "把图像改成xy风格，最佳画质";
+                const seed = parseInt(seedInput.value) || 313602191412550;
+                const size = parseInt(sizeInput.value) || 1536;
+
+                workflowData["76"]["inputs"]["image"] = uploadedImageName;
+                workflowData["135"]["inputs"]["text"] = promptText;
+                workflowData["125"]["inputs"]["noise_seed"] = seed;
+                workflowData["183"]["inputs"]["value"] = size;
+
+                currentPromptId = generateUUID();
+
+                const wsUrl = `ws://127.0.0.1:8188/ws?clientId=${CLIENT_ID}`;
+
+                const ws = await new Promise((resolve, reject) => {
+                    const socket = new WebSocket(wsUrl);
+                    socket.onopen = () => {
+                        console.log('[ComfyUI WS] 连接成功');
+                        resolve(socket);
+                    };
+                    socket.onerror = (e) => {
+                        console.error('[ComfyUI WS] 连接失败:', e);
+                        reject(new Error('WebSocket 连接失败'));
+                    };
+                    setTimeout(() => reject(new Error('WebSocket 连接超时')), 5000);
+                });
+
+                await new Promise((resolve, reject) => {
+                    ws.onmessage = (event) => {
+                        try {
+                            if (typeof event.data !== 'string') return;
+                            const message = JSON.parse(event.data);
+                            if (message.type === 'execution_start') {
+                                updateRealProgress({
+                                    type: 'comfyui_progress',
+                                    status: 'started',
+                                    value: 0,
+                                    max: 1,
+                                    node: ''
+                                });
+                            } else if (message.type === 'progress') {
+                                const data = message.data;
+                                if (data.prompt_id === currentPromptId) {
+                                    updateRealProgress({
+                                        type: 'comfyui_progress',
+                                        status: 'sampling',
+                                        value: data.value || 0,
+                                        max: data.max || 1,
+                                        node: data.node || ''
+                                    });
+                                }
+                            } else if (message.type === 'executing') {
+                                const data = message.data;
+                                if (data.prompt_id === currentPromptId) {
+                                    if (data.node === null) {
+                                        updateRealProgress({
+                                            type: 'comfyui_progress',
+                                            status: 'done',
+                                            value: 1,
+                                            max: 1,
+                                            node: ''
+                                        });
+                                        setTimeout(() => {
+                                            ws.close();
+                                            resolve(getResult(currentPromptId));
+                                        }, 500);
+                                    } else {
+                                        updateRealProgress({
+                                            type: 'comfyui_progress',
+                                            status: 'executing',
+                                            value: 0,
+                                            max: 1,
+                                            node: data.node || ''
+                                        });
+                                    }
+                                }
+                            } else if (message.type === 'execution_cached') {
+                                updateRealProgress({
+                                    type: 'comfyui_progress',
+                                    status: 'cached',
+                                    value: 0,
+                                    max: 1,
+                                    node: 'cached'
+                                });
+                            } else if (message.type === 'execution_error') {
+                                const data = message.data;
+                                ws.close();
+                                throw new Error(data.exception_message || '执行错误');
+                            }
+                        } catch (e) {
+                            reject(e);
+                        }
+                    };
+
+                    fetch(`http://127.0.0.1:8188/prompt`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            prompt: workflowData,
+                            client_id: CLIENT_ID,
+                            prompt_id: currentPromptId
+                        })
+                    }).then(async (response) => {
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            reject(new Error(`HTTP ${response.status}: ${errorText}`));
+                            return;
+                        }
+                        const result = await response.json();
+                        console.log('工作流提交成功, prompt_id:', result.prompt_id);
+                        currentPromptId = result.prompt_id;
+                        document.getElementById('progressStatus').textContent = '任务已提交，等待执行...';
+                    }).catch(reject);
+                });
+            } catch (e) {
+                placeholder.remove();
+                alert(e.message || "生成失败");
+            } finally {
+                isGenerating = false;
+                completeProgress();
+                setTimeout(() => hideProgress(), 800);
+                setLoading(false);
+            }
+        }
+
+        async function getResult(promptId) {
+            const placeholder = document.querySelector('.masonry-item');
+            try {
+                const res = await fetch(`http://127.0.0.1:8188/history/${promptId}`);
+                if (!res.ok) throw new Error('获取历史记录失败');
+                const history = await res.json();
+                const promptData = history[promptId];
+                if (!promptData) throw new Error('历史记录中未找到该任务');
+                if (promptData.status && promptData.status.status_str === 'error') {
+                    throw new Error('任务执行错误: ' + JSON.stringify(promptData.status.messages));
+                }
+                const outputs = promptData.outputs || {};
+                let imageUrl = null;
+                for (const nodeId in outputs) {
+                    const nodeOutput = outputs[nodeId];
+                    if (nodeOutput.images && nodeOutput.images.length > 0) {
+                        const image = nodeOutput.images[0];
+                        imageUrl = `http://127.0.0.1:8188/view?filename=${encodeURIComponent(image.filename)}&subfolder=${encodeURIComponent(image.subfolder || '')}&type=${encodeURIComponent(image.type || 'output')}`;
+                        break;
+                    }
+                }
+                if (imageUrl) {
+                    const promptText = promptInput.value.trim() || "把图像改成xy风格，8k,最佳画质";
+                    const timestamp = Date.now();
+                    const record = { timestamp, prompt: promptText, images: [imageUrl], type: '2dstyle' };
+                    renderImageCard(record, true);
+                    allHistory.unshift(record);
+                    currentIndex++;
+                    
+                    await fetch('/api/history/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(record)
+                    });
+                    
+                    if (placeholder) placeholder.remove();
+                } else {
+                    throw new Error('未找到生成结果');
+                }
+            } catch (e) {
+                if (placeholder) placeholder.remove();
+                alert('获取结果失败: ' + e.message);
+            }
+        }
+
+        function setLoading(isLoading) {
+            mainGenBtn.disabled = isLoading || !uploadedImageName;
+            if (isLoading) {
+                mainGenBtn.innerHTML = `<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div><span class="ml-2">处理中...</span>`;
+            } else {
+                mainGenBtn.innerHTML = `<span>2D风格细化</span>`;
+            }
+        }
+
+        let progressTimer = null;
+
+        function startProgress() {
+            document.getElementById('progressInline').classList.add('active');
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('progressStatus').textContent = '正在提交任务...';
+        }
+
+        function updateRealProgress(msg) {
+            const el = document.getElementById('progressInline');
+            if (!el.classList.contains('active')) el.classList.add('active');
+
+            const fill = document.getElementById('progressFill');
+            const percent = document.getElementById('progressPercent');
+            const status = document.getElementById('progressStatus');
+
+            if (msg.status === 'started') {
+                fill.style.width = '2%';
+                percent.textContent = '2%';
+                status.textContent = 'ComfyUI 开始执行...';
+            } else if (msg.status === 'executing') {
+                fill.style.width = '5%';
+                percent.textContent = '5%';
+                status.textContent = `执行节点: ${msg.node || '...'}`;
+            } else if (msg.status === 'cached') {
+                status.textContent = '部分节点命中缓存';
+            } else if (msg.status === 'sampling') {
+                const value = msg.value || 0;
+                const max = msg.max || 1;
+                const basePct = Math.round((value / max) * 80);
+                const finalPct = 10 + basePct;
+                fill.style.width = `${finalPct}%`;
+                percent.textContent = `${finalPct}%`;
+                status.textContent = `采样中 ${value}/${max}`;
+            } else if (msg.status === 'done') {
+                fill.style.width = '95%';
+                percent.textContent = '95%';
+                status.textContent = '解码保存中...';
+            }
+        }
+
+        function completeProgress() {
+            document.getElementById('progressFill').style.width = '100%';
+            document.getElementById('progressPercent').textContent = '100%';
+            document.getElementById('progressStatus').textContent = '生成完成！';
+        }
+
+        function hideProgress() {
+            document.getElementById('progressInline').classList.remove('active');
+            currentPromptId = null;
+        }
+
+        function createPlaceholder(text) {
+            const div = document.createElement('div');
+            div.className = 'masonry-item bg-gray-50 flex flex-col items-center justify-center border-dashed border-2 border-gray-200';
+            div.innerHTML = `<div class="w-6 h-6 border-2 border-gray-100 border-t-black rounded-full animate-spin mb-3"></div><span class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">${text}</span>`;
+            return div;
+        }
+
+        function renderImageCard(data, isNew = false) {
+            if (document.getElementById(`history-${data.timestamp}`)) return;
+            const masonry = document.getElementById('masonry');
+            const card = document.createElement('div');
+            card.id = `history-${data.timestamp}`;
+            card.className = 'masonry-item group cursor-zoom-in animate-in fade-in duration-700';
+            card.onclick = () => {
+                const allImages = allHistory.map(item => item.images[0]);
+                const startIndex = allHistory.findIndex(item => item.timestamp === data.timestamp);
+                openLightbox(data.images[0], allImages, startIndex);
+            };
+            card.innerHTML = `
+                <img src="${data.images[0]}" class="w-full h-full object-cover" loading="lazy">
+                <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <button onclick="deleteHistoryItem('${data.timestamp}', event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    </button>
+                </div>`;
+            isNew ? masonry.prepend(card) : masonry.appendChild(card);
+        }
+
+        async function loadModels() {
+            updateGenButtonState();
+        }
+
+        async function loadHistory(page = 0) {
+            if (isLoading) return;
+            const trigger = document.getElementById('loadMoreTrigger');
+            try {
+                isLoading = true;
+                if (page === 0) {
+                    allHistory = [];
+                    document.getElementById('masonry').innerHTML = '';
+                    currentIndex = 0;
+                    trigger.classList.remove('hidden');
+                    trigger.innerText = "Loading Archives...";
+                    const res = await fetch('/api/history?type=2dstyle');
+                    allHistory = await res.json();
+                } else {
+                    trigger.innerText = "Loading...";
+                    await new Promise(r => setTimeout(r, 400));
+                }
+                const nextData = allHistory.slice(currentIndex, currentIndex + PAGE_SIZE);
+                nextData.forEach(item => renderImageCard(item));
+                currentIndex += nextData.length;
+                if (currentIndex >= allHistory.length) { trigger.classList.add('hidden'); }
+                else { trigger.classList.remove('hidden'); trigger.innerText = "Load More Archive"; }
+            } catch (e) { console.error(e); trigger.innerText = "Error Loading History"; }
+            finally { isLoading = false; }
+        }
+
+        async function deleteHistoryItem(timestamp, event) {
+            event.stopPropagation();
+            const res = await fetch('/api/history/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timestamp }) });
+            if ((await res.json()).success) document.getElementById(`history-${timestamp}`).remove();
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !isLoading && currentIndex < allHistory.length) { loadHistory(1); }
+        }, { threshold: 0.1 });
+
+        window.onload = async () => {
+            await loadConfig();
+            checkServerConnection();
+            setInterval(checkServerConnection, 5000);
+            loadModels();
+            loadHistory(0).then(() => {
+                const trigger = document.getElementById('loadMoreTrigger');
+                if (trigger) { observer.observe(trigger); trigger.onclick = () => loadHistory(1); }
+            });
+            setInterval(async () => {
+                try {
+                    const res = await fetch("/api/queue_status?client_id=" + encodeURIComponent(CLIENT_ID));
+                    const data = await res.json();
+                    if (data.total > 0) {
+                        document.getElementById("statusText").innerText = `Queueing ${data.position}/${data.total}`;
+                        document.getElementById("dotColor").className = "w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse";
+                    } else {
+                        document.getElementById("statusText").innerText = "System Ready";
+                        document.getElementById("dotColor").className = "w-1.5 h-1.5 bg-black rounded-full";
+                    }
+                } catch (e) { }
+            }, 3000);
+        };
+
+        function openLightbox(url, images = null, startIndex = 0) {
+            if (images && images.length > 1) {
+                ImageViewer.init(images, startIndex);
+            } else {
+                ImageViewer.init([url], 0);
+                document.getElementById('lightboxPrevBtn').style.display = 'none';
+                document.getElementById('lightboxNextBtn').style.display = 'none';
+            }
+        }
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.add('hidden');
+            document.body.style.overflow = '';
+            setTimeout(() => {
+                document.getElementById('lightboxImg').src = '';
+            }, 300);
+        }
+        function handleOutsideClick(e) { if (e.target.id === 'lightbox') closeLightbox(); }
+        async function downloadImage() {
+            const img = document.getElementById('lightboxImg');
+            if (!img.src) return;
+            
+            try {
+                const response = await fetch(img.src);
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `2DStyle_${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error('下载失败:', e);
+                window.open(img.src, '_blank');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+{
+  "1": {
+    "inputs": {},
+    "class_type": "🔹Photoshop ComfyUI Plugin",
+    "_meta": {
+      "title": "🔹Photoshop获取图像"
+    }
+  },
+  "2": {
+    "inputs": {
+      "images": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  },
+  "5": {
+    "inputs": {
+      "mask": [
+        "1",
+        1
+      ]
+    },
+    "class_type": "MaskPreview",
+    "_meta": {
+      "title": "遮罩预览"
+    }
+  }
+}

@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/logo.png" type="image/png">
+    <title>图像编辑</title>
+    <script src="/static/modules/auth-token.js?v=20260525001"></script>
+    <link rel="stylesheet" href="/static/tailwind.min.css?v=20260521039">
+    <script src="/static/lucide.min.js?v=20260521039"></script>
+    <script src="/static/theme.js?v=20260521039"></script>
+    <script src="/static/modules/image-viewer.js?v=20260521006"></script>
+    <script src="/static/modules/image-editor.js?v=20260526006"></script>
+    <style>
+        :root { --accent: #00b4d8; --bg: #f0f4fa; --card: #ffffff; --easing: cubic-bezier(0.4, 0, 0.2, 1); }
+        *::-webkit-scrollbar { width:10px!important; height:10px!important; background:transparent!important; }
+        *::-webkit-scrollbar-track { background:transparent!important; border:none!important; }
+        *::-webkit-scrollbar-thumb { background-color:#d8d8d8!important; border:3px solid transparent!important; border-right-width:5px!important; background-clip:padding-box!important; border-radius:10px!important; }
+        *::-webkit-scrollbar-thumb:hover { background-color:#c0c0c0!important; }
+        *::-webkit-scrollbar-corner { background:transparent!important; }
+        * { scrollbar-width:thin!important; scrollbar-color:#d8d8d8 transparent!important; }
+        body { background-color: var(--bg); font-family: "Inter", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--accent); -webkit-font-smoothing: antialiased; }
+        .container-box { max-width: 1280px; margin: 0 auto; padding: 0 40px; margin-top: 50px; }
+        .nano-input { background: var(--card); border: 1px solid #eef0f2; transition: all 0.3s var(--easing); }
+        .nano-input:focus { border-color: #000; box-shadow: 0 0 0 1px #000; }
+        .upload-item { background: var(--card); border: 1px dashed #e2e8f0; transition: all 0.4s var(--easing); position: relative; overflow: hidden; }
+        .upload-item:hover { border-color: #000; background: #fff; transform: translateY(-2px); }
+        .upload-item.drag-over { border-style: solid; border-color: #000; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .preview-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: fadeIn 0.5s var(--easing); }
+        .glass-btn { background: #111827; transition: all 0.3s var(--easing); }
+        .glass-btn:hover { background: #000; transform: translateY(-1px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+        .glass-btn:active { transform: scale(0.98); }
+        .glass-btn:disabled { background: #666; cursor: not-allowed; opacity: 0.5; }
+        .engine-panel { background: #fff; border: 1px solid #edf0f3; border-radius: 24px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+        .engine-label { display: flex; align-items: center; gap: 6px; color: #94a3b8; font-size: 10px; font-weight: 600; letter-spacing: .04em; }
+        .engine-switch { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 999px; padding: 3px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+        .engine-btn { border-radius: 999px; height: 34px; display: flex; align-items: center; justify-content: center; gap: 6px; color: #64748b; font-size: 10px; font-weight: 600; letter-spacing: .02em; transition: all .25s var(--easing); cursor: pointer; }
+        .engine-btn.active { background: #fff; color: #111827; box-shadow: 0 1px 3px rgba(15,23,42,.08); }
+        .engine-btn:not(.active):hover { color: #111827; background: rgba(0,0,0,.04); }
+        .masonry-item:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.08); }
+        .masonry-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        @media (min-width: 768px) { .masonry-grid { grid-template-columns: repeat(4, 1fr); } }
+        .masonry-item { aspect-ratio: 1 / 1; border-radius: 24px; overflow: hidden; background: #fff; border: 1px solid #f1f5f9; transition: all 0.5s var(--easing); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes b-loading { 0%{transform:scale(1);background:#000} 50%{transform:scale(1.15);background:#444} 100%{transform:scale(1);background:#000} }
+        .loading-box { width: 10px; height: 10px; animation: b-loading 1s infinite var(--easing); }
+        
+        .gallery-lightbox:hover #lightboxPrevBtn:not([style*="display: none"]) { opacity: 1 !important; pointer-events: auto !important; }
+        .gallery-lightbox:hover #lightboxNextBtn:not([style*="display: none"]) { opacity: 1 !important; pointer-events: auto !important; }
+        
+        body.studio-theme-dark .engine-panel {
+            background: #0d1520 !important;
+            border-color: #1a2a3a !important;
+        }
+        
+        body.studio-theme-dark .engine-switch {
+            background: #080c14 !important;
+            border-color: #1a2a3a !important;
+        }
+        
+        body.studio-theme-dark .engine-btn.active {
+            background: #0d1520 !important;
+            color: #e0e7ef !important;
+            box-shadow: 0 1px 3px rgba(0, 240, 255, 0.15);
+        }
+        
+        body.studio-theme-dark .engine-btn:not(.active) {
+            color: #6a8fa8 !important;
+        }
+        
+        body.studio-theme-dark .engine-btn:not(.active):hover {
+            background: rgba(0, 240, 255, 0.08) !important;
+            color: #00f0ff !important;
+        }
+        
+        body.studio-theme-dark .engine-label {
+            color: #00d9ff !important;
+        }
+        
+        body.studio-theme-dark .upload-item {
+            background: #0d1520 !important;
+            border-color: #1a2a3a !important;
+        }
+        
+        body.studio-theme-dark .upload-item:hover {
+            border-color: #00d9ff !important;
+            background: rgba(0, 212, 255, 0.05) !important;
+        }
+        
+        body.studio-theme-dark #localParams .bg-white {
+            background: #0d1520 !important;
+            border-color: #1a2a3a !important;
+        }
+        
+        body.studio-theme-dark #imgCount {
+            background: rgba(0, 240, 255, 0.15) !important;
+            color: #00d9ff !important;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.3s var(--easing);
+        }
+        .toggle-switch.active {
+            background: #00b4d8;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            transition: all 0.3s var(--easing);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .toggle-switch.active::after {
+            left: 22px;
+        }
+    </style>
+    <link rel="stylesheet" href="/static/theme.css?v=20260511-cyberpunk-cyan">
+</head>
+
+<body class="antialiased transition-colors duration-300">
+    <div class="container-box min-h-screen flex flex-col">
+        <header class="flex justify-between items-end mb-10">
+            <div class="space-y-1">
+                <h1 class="text-4xl font-extrabold tracking-tighter italic">图像编辑</h1>
+                <p class="text-[10px] font-bold uppercase tracking-[0.4em] text-gray-400">Image Editing with FLUX Klein</p>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-2 gap-12 max-w-6xl mx-auto w-full">
+            <!-- 左侧：图片上传区域 -->
+            <div class="space-y-6">
+                <div class="flex items-center gap-2 text-gray-400">
+                    <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                    <span class="text-xs font-black uppercase tracking-widest">图片上传</span>
+                    <span id="imgCount" class="ml-auto text-xs font-bold bg-black/5 px-2 py-0.5 rounded-full">0/2</span>
+                </div>
+                <div class="nano-input w-full p-6 rounded-3xl">
+                    <div id="uploadGrid" class="grid grid-cols-2 gap-4">
+                        <div id="slot0" class="upload-item rounded-2xl aspect-square flex items-center justify-center cursor-pointer" data-index="0">
+                            <div class="text-center pointer-events-none">
+                                <i data-lucide="plus" class="w-5 h-5 mx-auto mb-1"></i>
+                                <span class="text-[9px] font-bold uppercase">主图</span>
+                            </div>
+                        </div>
+                        <div id="slot1" class="upload-item rounded-2xl aspect-square flex items-center justify-center cursor-pointer" data-index="1">
+                            <div class="text-center pointer-events-none">
+                                <i data-lucide="plus" class="w-5 h-5 mx-auto mb-1"></i>
+                                <span class="text-[9px] font-bold uppercase">参考图</span>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
+                    <div class="mt-4 flex items-center justify-between">
+                        <div class="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100">
+                            <div>
+                                <div class="text-xs font-bold mb-1">单图模式</div>
+                                <div class="text-[10px] text-gray-400">开启后仅使用主图编辑</div>
+                            </div>
+                            <div id="ignoreToggle" class="toggle-switch active" onclick="toggleIgnoreRef()"></div>
+                        </div>
+                    </div>
+                    <button id="clearBtn" onclick="clearAllImages()" class="mt-4 text-[10px] font-bold text-gray-400 hover:text-black transition-colors hidden">清除所有图片</button>
+                </div>
+            </div>
+
+            <!-- 右侧：提示词和参数 -->
+            <div class="space-y-6">
+                <div class="flex items-center gap-2 text-gray-400">
+                    <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+                    <span class="text-xs font-black uppercase tracking-widest">输入提示词</span>
+                </div>
+                <div class="nano-input w-full p-6 rounded-3xl space-y-6">
+                    <textarea id="promptInput" rows="6" class="w-full text-sm outline-none resize-none placeholder-gray-300 bg-transparent" placeholder="描述你的创作愿景..."></textarea>
+                    
+                    <div id="localParams" class="space-y-6 border-t border-gray-100 pt-6">
+                        <div class="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100">
+                            <div>
+                                <div class="text-xs font-bold mb-1">缩放最长边</div>
+                                <input id="sizeInput" type="number" value="1024" class="w-24 bg-transparent outline-none border-b-2 border-gray-200 focus:border-blue-500 text-sm font-bold">
+                            </div>
+                        </div>
+
+                        <div class="engine-panel border border-gray-100 rounded-2xl">
+                            <div class="engine-label">
+                                <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+                                <span>引擎</span>
+                            </div>
+                            <div class="engine-switch">
+                                <button id="providerLocal" onclick="setProvider('local')" class="engine-btn active">
+                                    <i data-lucide="cpu" class="w-3 h-3"></i> 本地
+                                </button>
+                                <button id="providerMs" onclick="setProvider('ms')" class="engine-btn">
+                                    <i data-lucide="cloud" class="w-3 h-3"></i> ModelScope
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="genBtn" onclick="handleGenerate()" class="glass-btn w-full py-5 text-white rounded-xl font-bold text-[11px] uppercase tracking-[0.4em] flex items-center justify-center gap-3 shadow-xl shadow-black/10" disabled>
+                        <i data-lucide="zap" id="btnIcon" class="w-4 h-4 text-yellow-400"></i>
+                        <span id="btnText">开始生成</span>
+                    </button>
+                    <div id="progressInline" class="hidden mt-4 p-4 bg-white rounded-2xl border border-gray-100 space-y-2">
+                        <div class="flex items-center justify-between text-[10px] font-bold">
+                            <span id="progressStatus" class="text-gray-500">准备中...</span>
+                            <span id="progressPercent" class="text-gray-400">0%</span>
+                        </div>
+                        <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div id="progressFill" class="h-full bg-blue-500 rounded-full transition-all duration-300" style="width:0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <section class="mt-32">
+            <div class="flex items-center gap-6 mb-10">
+                <h2 class="text-[11px] font-black uppercase tracking-[0.5em]">Archive</h2>
+                <div class="h-px flex-1 bg-black/5"></div>
+            </div>
+            <div id="masonry" class="masonry-grid"></div>
+        </section>
+    </div>
+
+    <div id="lightbox" onclick="handleOutsideClick(event)" class="hidden fixed inset-0 z-50 gallery-lightbox bg-white/95 backdrop-blur-3xl flex items-center justify-center p-8 overflow-auto">
+        <button onclick="closeLightbox()" class="absolute top-10 right-10 p-2 hover:rotate-90 transition-transform duration-500">
+            <i data-lucide="x" class="w-8 h-8"></i>
+        </button>
+        <button id="lightboxPrevBtn" onclick="ImageViewer.prevImage()" class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all opacity-0 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </button>
+        <button id="lightboxNextBtn" onclick="ImageViewer.nextImage()" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all opacity-0 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m9 18 6-6-6-6"/>
+            </svg>
+        </button>
+        <img id="lightboxImg" src="" class="max-h-[80vh] rounded-3xl shadow-2xl">
+        <div id="lightboxRes" class="absolute top-4 left-4 bg-black/30 backdrop-blur-md border border-white/20 text-white px-3 py-1.5 rounded-full text-[10px] font-medium tracking-wider opacity-0 transition-opacity duration-300 pointer-events-none z-30"></div>
+        <button onclick="downloadImage()" class="absolute top-10 right-20 p-2 bg-black text-white rounded-xl hover:scale-105 transition-transform">
+            <i data-lucide="download" class="w-5 h-5"></i>
+        </button>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        const CLIENT_ID = localStorage.getItem("client_id") || generateUUID();
+        localStorage.setItem("client_id", CLIENT_ID);
+
+        const _isLocalAccess = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+        let COMFYUI_SERVER = 'http://127.0.0.1:8188';
+        let IS_LOCAL_SERVER = _isLocalAccess;
+
+        async function loadConfig() {
+            const localConfig = localStorage.getItem('comfyui_config');
+            if (localConfig) {
+                try {
+                    const config = JSON.parse(localConfig);
+                    const activeServer = config.active_server || '本地服务器';
+                    IS_LOCAL_SERVER = (activeServer === '本地服务器');
+                    if (activeServer === '云端服务器' && config.cloud_address) {
+                        COMFYUI_SERVER = (config.cloud_address.startsWith('http') ? config.cloud_address : `https://${config.cloud_address}`).replace(/\/+$/, '');
+                    } else if (config.local_address) {
+                        COMFYUI_SERVER = (config.local_address.startsWith('http') ? config.local_address : `http://${config.local_address}`).replace(/\/+$/, '');
+                    }
+                    return;
+                } catch (e) {
+                    console.error('解析本地配置失败:', e);
+                }
+            }
+        }
+
+        async function apiFetch(url, options = {}) {
+            if (IS_LOCAL_SERVER) {
+                const directUrl = COMFYUI_SERVER + url;
+                const response = await fetch(directUrl, options);
+                return response;
+            }
+            const headers = {
+                'X-ComfyUI-Server-Url': COMFYUI_SERVER,
+                ...(options.headers || {})
+            };
+            const response = await fetch(url, { ...options, headers });
+            return response;
+        }
+
+        function buildWsUrl() {
+            if (IS_LOCAL_SERVER) {
+                let baseUrl = COMFYUI_SERVER.replace(/\/+$/, '');
+                let wsProtocol = baseUrl.startsWith('https://') ? 'wss' : 'ws';
+                return `${wsProtocol}://${baseUrl.replace(/^https?:\/\//, '')}/ws?clientId=${CLIENT_ID}`;
+            }
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return `${protocol}//${window.location.host}/api/comfyui/ws?clientId=${CLIENT_ID}`;
+        }
+
+        async function checkServerConnection() {
+            try {
+                const statsUrl = IS_LOCAL_SERVER ? '/system_stats' : '/api/comfyui/system_stats';
+                const response = await apiFetch(statsUrl);
+                if (response.ok) {
+                    const statusEl = document.getElementById("statusText");
+                    const dotEl = document.getElementById("dotColor");
+                    if (statusEl) statusEl.innerText = "System Ready";
+                    if (dotEl) dotEl.className = "w-1.5 h-1.5 bg-green-500 rounded-full";
+                } else {
+                    throw new Error('Server not responding');
+                }
+            } catch (e) {
+                const statusEl = document.getElementById("statusText");
+                const dotEl = document.getElementById("dotColor");
+                if (statusEl) statusEl.innerText = "System Offline";
+                if (dotEl) dotEl.className = "w-1.5 h-1.5 bg-red-500 rounded-full";
+            }
+        }
+
+        let currentPrompt = '';
+        let provider = 'local';
+        let uploadedImages = [null, null];
+        let uploadedFiles = [null, null];
+        let ignoreRef = true;
+
+        const slots = [document.getElementById('slot0'), document.getElementById('slot1')];
+
+        function updateProgress(percent, text) {
+            var bar = document.getElementById('progressInline');
+            var fill = document.getElementById('progressFill');
+            var pct = document.getElementById('progressPercent');
+            var status = document.getElementById('progressStatus');
+            if (!bar || !fill || !pct || !status) return;
+            bar.classList.remove('hidden');
+            if (percent !== null && percent !== undefined) {
+                fill.style.width = Math.min(100, Math.max(0, percent)) + '%';
+                pct.textContent = Math.round(percent) + '%';
+            }
+            if (text) status.textContent = text;
+        }
+
+        function resetProgress() {
+            var bar = document.getElementById('progressInline');
+            var fill = document.getElementById('progressFill');
+            if (bar) bar.classList.add('hidden');
+            if (fill) fill.style.width = '0%';
+        }
+
+        function setProvider(p) {
+            provider = p;
+            document.getElementById('providerLocal').classList.toggle('active', p === 'local');
+            document.getElementById('providerMs').classList.toggle('active', p === 'ms');
+        }
+
+        function toggleIgnoreRef() {
+            ignoreRef = !ignoreRef;
+            document.getElementById('ignoreToggle').classList.toggle('active', ignoreRef);
+            const slot1 = document.getElementById('slot1');
+            if (ignoreRef) {
+                slot1.style.display = 'none';
+            } else {
+                slot1.style.display = 'flex';
+            }
+        }
+
+        function updateButtonState() {
+            const btn = document.getElementById('genBtn');
+            const hasMain = uploadedImages[0] !== null;
+            btn.disabled = !hasMain;
+        }
+
+        slots.forEach((slot, i) => {
+            slot.onclick = () => {
+                fileInput.dataset.target = i;
+                fileInput.click();
+            };
+        });
+
+        fileInput.onchange = (e) => {
+            const target = parseInt(fileInput.dataset.target) || 0;
+            const files = Array.from(e.target.files);
+            files.forEach((file, idx) => {
+                const slotIdx = target + idx;
+                if (slotIdx > 1) return;
+                handleFile(file, slotIdx);
+            });
+        };
+
+        async function handleFile(file, index) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const slot = slots[index];
+                const labels = ['主图', '参考图'];
+                slot.innerHTML = `<img src="${e.target.result}" class="preview-img">`
+                    + `<button id="del${index}" onclick="clearSlot(${index},event)" class="hidden absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full shadow-sm z-10 font-bold text-base flex items-center justify-center hover:bg-white">\u00D7</button>`
+                    + `<button id="edit${index}" onclick="handleEdit(${index},event)" class="hidden absolute top-2 right-12 w-8 h-8 bg-white/90 rounded-full shadow-sm z-10 text-sm font-bold flex items-center justify-center hover:bg-white">\u270E</button>`;
+                slot.style.position = 'relative';
+                setTimeout(function() {
+                    var d = document.getElementById('del' + index);
+                    var e = document.getElementById('edit' + index);
+                    if (d) d.classList.remove('hidden');
+                    if (e) e.classList.remove('hidden');
+                }, 0);
+            };
+            reader.readAsDataURL(file);
+
+            const formData = new FormData();
+            formData.append('files', file);
+            try {
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                var fileObj = data.files && data.files[0];
+                if (fileObj) {
+                    var comfyUrl = '/api/view?filename=' + encodeURIComponent(fileObj.comfy_name) + '&type=input';
+                    uploadedImages[index] = fileObj.comfy_name;
+                    uploadedFiles[index] = { url: comfyUrl, name: file.name, comfy_name: fileObj.comfy_name };
+                }
+                updateCount();
+                updateButtonState();
+            } catch (err) { console.error("Upload error"); }
+        }
+
+        function clearSlot(index, ev) {
+            if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+            uploadedImages[index] = null;
+            uploadedFiles[index] = null;
+            var slot = slots[index];
+            var labels = ['主图', '参考图'];
+            slot.innerHTML = '<div class="text-center pointer-events-none"><i data-lucide="plus" class="w-5 h-5 mx-auto mb-1"></i><span class="text-[9px] font-bold uppercase">' + labels[index] + '</span></div>';
+            lucide.createIcons();
+            updateCount();
+            updateButtonState();
+        }
+
+        function handleEdit(index, ev) {
+            if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+            var fileData = uploadedFiles[index];
+            if (!fileData || !fileData.url) return;
+            if (typeof ImageEditor === 'undefined') { alert('图像编辑器未加载'); return; }
+            ImageEditor.open(fileData.url, {
+                onSave: function(result) {
+                    if (!result.url || !result.comfy_name) return;
+                    var slot = slots[index];
+                    var img = slot.querySelector('img.preview-img');
+                    if (img) img.src = result.url;
+                    uploadedImages[index] = result.comfy_name;
+                    uploadedFiles[index] = { url: result.url, name: result.comfy_name, comfy_name: result.comfy_name };
+                },
+                onCancel: function() {}
+            });
+        }
+
+        function clearAllImages() {
+            uploadedImages = [null, null];
+            uploadedFiles = [null, null];
+            slots.forEach((slot, i) => {
+                const labels = ['主图', '参考图'];
+                slot.innerHTML = `<div class="text-center pointer-events-none"><i data-lucide="plus" class="w-5 h-5 mx-auto mb-1"></i><span class="text-[9px] font-bold uppercase">${labels[i]}</span></div>`;
+                slot.style.opacity = '1';
+                slot.style.pointerEvents = 'auto';
+            });
+            updateCount();
+            updateButtonState();
+            document.getElementById('clearBtn').classList.add('hidden');
+            lucide.createIcons();
+        }
+
+        function updateCount() {
+            const count = uploadedImages.filter(img => img !== null).length;
+            document.getElementById('imgCount').innerText = `${count}/2`;
+            if (count > 0) document.getElementById('clearBtn').classList.remove('hidden');
+        }
+
+        async function handleGenerate() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            if (!prompt) return alert("请输入提示词");
+            if (!uploadedImages[0]) return alert("请上传主图");
+
+            var btn = document.getElementById('genBtn');
+            var ws = null;
+            btn.disabled = true;
+            btn.style.backgroundColor = '#333';
+            btn.innerHTML = '<i data-lucide="zap" class="w-4 h-4 text-yellow-400 fill-yellow-400 animate-pulse"></i><span>处理中...</span>';
+            lucide.createIcons();
+
+            try {
+                if (provider === 'ms') {
+                    var previewSrc = slots[0].querySelector('img')?.src;
+                    if (!previewSrc) throw new Error("请先上传图片");
+                    updateProgress(0, '提交到 ModelScope...');
+                    var msRes = await fetch('/api/ms/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            prompt: prompt,
+                            model: 'black-forest-labs/FLUX.2-klein-9B',
+                            image_urls: [previewSrc],
+                            client_id: CLIENT_ID
+                        })
+                    });
+                    if (!msRes.ok) throw new Error("MS生成失败");
+                    var msData = await msRes.json();
+                    if (!msData.url) throw new Error("MS生成失败: 未返回图片");
+                    updateProgress(100, '生成完成');
+                    showResult({ images: [msData.url], timestamp: Date.now() });
+                } else {
+                    var workflowData = JSON.parse(JSON.stringify(WORKFLOW_CONFIG.workflow));
+
+                    workflowData["16"]["inputs"]["text"] = prompt;
+
+                    var seed = Math.floor(Math.random() * 10**15);
+                    workflowData["23"]["inputs"]["noise_seed"] = seed;
+
+                    var size = parseInt(document.getElementById('sizeInput').value) || 1024;
+                    workflowData["33"]["inputs"]["scale_to_length"] = size;
+
+                    workflowData["8"]["inputs"]["image"] = uploadedImages[0];
+
+                    if (uploadedImages[1]) {
+                        workflowData["4"]["inputs"]["image"] = uploadedImages[1];
+                    } else {
+                        workflowData["4"]["inputs"]["image"] = uploadedImages[0];
+                    }
+
+                    // 单图模式: 从工作流中删除参考图链路节点 3/4/5/6/7,
+                    // 它们不会发送到 ComfyUI，自然不会被执行
+                    if (ignoreRef) {
+                        delete workflowData["3"];
+                        delete workflowData["4"];
+                        delete workflowData["5"];
+                        delete workflowData["6"];
+                        delete workflowData["7"];
+                        workflowData["13"]["inputs"]["positive"] = ["18", 0];
+                        workflowData["13"]["inputs"]["negative"] = ["17", 0];
+                    }
+
+                    workflowData["22"]["inputs"]["filename_prefix"] = "Flux2-Klein_" + Date.now();
+
+                    var wsUrl = buildWsUrl();
+
+                    // 尝试建立 WebSocket 连接获取实时进度
+                    try {
+                        ws = new WebSocket(wsUrl);
+                        await new Promise(function(resolve, reject) {
+                            ws.onopen = function() { resolve(); };
+                            ws.onerror = function() { reject(new Error('WebSocket 连接失败')); };
+                            setTimeout(function() { reject(new Error('WebSocket 连接超时')); }, 3000);
+                        });
+                    } catch (e) {
+                        console.warn('WebSocket 不可用，无实时进度:', e.message);
+                        ws = null;
+                    }
+
+                    if (ws) {
+                        ws.onmessage = function(event) {
+                            try {
+                                if (typeof event.data !== 'string') return;
+                                var msg = JSON.parse(event.data);
+
+                                if (msg.type === 'progress') {
+                                    var d = msg.data;
+                                    var pct = Math.round((d.value / d.max) * 100);
+                                    updateProgress(pct, '采样中 ' + d.value + '/' + d.max);
+                                } else if (msg.type === 'executing') {
+                                    if (msg.data && msg.data.node === null) {
+                                        updateProgress(100, '执行完成');
+                                    } else if (msg.data && msg.data.node) {
+                                        var title = (WORKFLOW_CONFIG.workflow[msg.data.node] && WORKFLOW_CONFIG.workflow[msg.data.node]._meta && WORKFLOW_CONFIG.workflow[msg.data.node]._meta.title) || ('节点 #' + msg.data.node);
+                                        updateProgress(null, '执行: ' + title);
+                                    }
+                                } else if (msg.type === 'execution_start') {
+                                    updateProgress(0, '开始执行...');
+                                } else if (msg.type === 'execution_cached') {
+                                    updateProgress(null, '使用缓存结果...');
+                                } else if (msg.type === 'execution_error') {
+                                    updateProgress(null, '执行出错');
+                                }
+                            } catch (e) {}
+                        };
+                    }
+
+                    updateProgress(0, '提交任务...');
+
+                    var res = await fetch('/api/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            workflow_data: workflowData,
+                            type: "klein",
+                            client_id: CLIENT_ID
+                        })
+                    });
+                    var data = await res.json();
+                    if (data.error) throw new Error(data.error);
+                    if (!data.images || !data.images.length) throw new Error("No images returned");
+                    if (ws) { try { ws.close(); } catch(e) {} ws = null; }
+                    updateProgress(100, '生成完成');
+                    showResult(data);
+                }
+            } catch (error) {
+                console.error("Generation Error", error);
+                if (ws) { try { ws.close(); } catch(e) {} ws = null; }
+                alert('Error: ' + error.message);
+            } finally {
+                if (ws) { try { ws.close(); } catch(e) {} ws = null; }
+                btn.disabled = false;
+                btn.style.backgroundColor = '';
+                btn.innerHTML = '<i data-lucide="zap" class="w-4 h-4 text-yellow-400"></i><span>开始生成</span>';
+                lucide.createIcons();
+                setTimeout(function() { resetProgress(); }, 2000);
+            }
+        }
+
+        function showResult(data) {
+            currentPrompt = document.getElementById('promptInput').value.trim();
+            renderCard(data, true);
+        }
+
+        function renderCard(data, isNew = false) {
+            const masonry = document.getElementById('masonry');
+            if (document.getElementById(`k-${data.timestamp}`)) return;
+            const card = document.createElement('div');
+            card.id = `k-${data.timestamp}`;
+            card.className = 'masonry-item group cursor-zoom-in';
+            card.onclick = () => {
+                const historyRes = fetch('/api/history?type=klein').then(res => res.json());
+                historyRes.then(history => {
+                    const allImages = history.map(item => item.images[0]);
+                    const startIndex = history.findIndex(item => item.timestamp === data.timestamp);
+                    openLightbox(data.images[0], allImages, startIndex);
+                });
+            };
+            card.innerHTML = `
+                <img src="${data.images[0]}" class="w-full h-full object-cover" loading="lazy">
+                <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <button onclick="deleteHistoryItem('${data.timestamp}', event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    </button>
+                </div>`;
+            isNew ? masonry.prepend(card) : masonry.appendChild(card);
+        }
+
+        function openLightbox(url, images = null, startIndex = 0) {
+            if (images && images.length > 1) {
+                ImageViewer.init(images, startIndex);
+            } else {
+                ImageViewer.init([url], 0);
+                document.getElementById('lightboxPrevBtn').style.display = 'none';
+                document.getElementById('lightboxNextBtn').style.display = 'none';
+            }
+        }
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.add('hidden');
+            document.body.style.overflow = '';
+            setTimeout(() => {
+                document.getElementById('lightboxImg').src = '';
+                document.getElementById('lightboxRes').style.opacity = '0';
+            }, 300);
+        }
+        function handleOutsideClick(e) { if (e.target.id === 'lightbox') closeLightbox(); }
+        async function downloadImage() {
+            const img = document.getElementById('lightboxImg');
+            if (!img.src) return;
+            
+            try {
+                const response = await fetch(img.src);
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `klein_${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error('下载失败:', e);
+                window.open(img.src, '_blank');
+            }
+        }
+
+        async function deleteHistoryItem(timestamp, event) {
+            event.stopPropagation();
+            const res = await fetch('/api/history/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timestamp }) });
+            if ((await res.json()).success) document.getElementById(`k-${timestamp}`).remove();
+        }
+
+        async function loadHistory() {
+            try {
+                const res = await fetch('/api/history?type=klein');
+                const history = await res.json();
+                history.forEach(item => renderCard(item));
+            } catch (e) { }
+        }
+
+        const WORKFLOW_CONFIG = {
+            name: "图像编辑",
+            type: "klein",
+            workflow: {
+                "1": { "inputs": { "sampler_name": "euler" }, "class_type": "KSamplerSelect", "_meta": { "title": "K采样器选择" } },
+                "2": { "inputs": { "vae_name": "flux2-vae.safetensors" }, "class_type": "VAELoader", "_meta": { "title": "加载VAE" } },
+                "3": { "inputs": { "upscale_method": "nearest-exact", "megapixels": 1, "resolution_steps": 1, "image": ["4", 0] }, "class_type": "ImageScaleToTotalPixels", "_meta": { "title": "缩放图像（像素）" } },
+                "4": { "inputs": { "image": "ref_image.png" }, "class_type": "LoadImage", "_meta": { "title": "加载图像-参考图" } },
+                "5": { "inputs": { "conditioning": ["17", 0], "latent": ["6", 0] }, "class_type": "ReferenceLatent", "_meta": { "title": "参考Latent-负向" } },
+                "6": { "inputs": { "pixels": ["3", 0], "vae": ["2", 0] }, "class_type": "VAEEncode", "_meta": { "title": "VAE编码-参考图" } },
+                "7": { "inputs": { "conditioning": ["18", 0], "latent": ["6", 0] }, "class_type": "ReferenceLatent", "_meta": { "title": "参考Latent-正向" } },
+                "8": { "inputs": { "image": "main_image.png" }, "class_type": "LoadImage", "_meta": { "title": "加载图像-主图" } },
+                "10": { "inputs": { "image": ["33", 0] }, "class_type": "GetImageSize", "_meta": { "title": "获取图像尺寸" } },
+                "11": { "inputs": { "width": ["10", 0], "height": ["10", 1], "batch_size": 1 }, "class_type": "EmptyFlux2LatentImage", "_meta": { "title": "Flux2代 空Latent" } },
+                "12": { "inputs": { "steps": 6, "width": ["10", 0], "height": ["10", 1] }, "class_type": "Flux2Scheduler", "_meta": { "title": "Flux2代 调度器" } },
+                "13": { "inputs": { "cfg": 1, "model": ["14", 0], "positive": ["7", 0], "negative": ["5", 0] }, "class_type": "CFGGuider", "_meta": { "title": "CFG引导" } },
+                "14": { "inputs": { "unet_name": "Flux2-Klein-9B-True-v2-fp8mixed.safetensors", "weight_dtype": "default" }, "class_type": "UNETLoader", "_meta": { "title": "UNET加载器" } },
+                "15": { "inputs": { "clip_name": "qwen_3_8b_fp8mixed.safetensors", "type": "flux2", "device": "default" }, "class_type": "CLIPLoader", "_meta": { "title": "加载CLIP" } },
+                "16": { "inputs": { "text": "图1的人物抱着图2的机械鲨鱼" }, "class_type": "CR Text", "_meta": { "title": "🔤 文本" } },
+                "17": { "inputs": { "conditioning": ["24", 0], "latent": ["19", 0] }, "class_type": "ReferenceLatent", "_meta": { "title": "参考Latent-主图负向" } },
+                "18": { "inputs": { "conditioning": ["25", 0], "latent": ["19", 0] }, "class_type": "ReferenceLatent", "_meta": { "title": "参考Latent-主图正向" } },
+                "19": { "inputs": { "pixels": ["33", 0], "vae": ["2", 0] }, "class_type": "VAEEncode", "_meta": { "title": "VAE编码-主图" } },
+                "20": { "inputs": { "noise": ["23", 0], "guider": ["13", 0], "sampler": ["1", 0], "sigmas": ["12", 0], "latent_image": ["11", 0] }, "class_type": "SamplerCustomAdvanced", "_meta": { "title": "自定义采样器(高级)" } },
+                "21": { "inputs": { "samples": ["20", 0], "vae": ["2", 0] }, "class_type": "VAEDecode", "_meta": { "title": "VAE解码" } },
+                "22": { "inputs": { "filename_prefix": "Flux2-Klein-4b-base", "images": ["21", 0] }, "class_type": "SaveImage", "_meta": { "title": "保存图像" } },
+                "23": { "inputs": { "noise_seed": 300548267917431 }, "class_type": "RandomNoise", "_meta": { "title": "随机噪波" } },
+                "24": { "inputs": { "text": "", "嵌入提示词": null, "clip": ["15", 0] }, "class_type": "CLIPTextEncode", "_meta": { "title": "CLIP Text Encode ( Negative Prompt)" } },
+                "25": { "inputs": { "text": ["16", 0], "嵌入提示词": null, "clip": ["15", 0] }, "class_type": "CLIPTextEncode", "_meta": { "title": "CLIP Text Encode (Positive Prompt)" } },
+                "33": { "inputs": { "aspect_ratio": "original", "proportional_width": 1, "proportional_height": 1, "fit": "letterbox", "method": "lanczos", "round_to_multiple": "8", "scale_to_side": "longest", "scale_to_length": 1024, "background_color": "#000000", "image": ["8", 0] }, "class_type": "LayerUtility: ImageScaleByAspectRatio V2", "_meta": { "title": "图层工具：按宽高比缩放_V2" } }
+            },
+            nodeMappings: {
+                "8": { param: "image", label: "主图", type: "upload" },
+                "4": { param: "image", label: "参考图", type: "upload" },
+                "16": { param: "text", label: "提示词", type: "textarea" },
+                "33": { param: "scale_to_length", label: "缩放最长边", type: "number" }
+            },
+            apiEndpoint: "/api/generate"
+        };
+
+        window.onload = async () => {
+            await loadConfig();
+            checkServerConnection();
+            setInterval(checkServerConnection, 5000);
+            loadHistory(); 
+            lucide.createIcons();
+            toggleIgnoreRef();
+        };
+    </script>
+</body>
+</html>

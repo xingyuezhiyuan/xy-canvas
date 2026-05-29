@@ -1,0 +1,36 @@
+{
+  "2": {
+    "inputs": {
+      "images": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  },
+  "3": {
+    "inputs": {
+      "image": "cankao.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "4": {
+    "inputs": {
+      "torchscript_jit": "default",
+      "image": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "InspyrenetRembg",
+    "_meta": {
+      "title": "InspyrenetRembg"
+    }
+  }
+}

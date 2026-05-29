@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/logo.png" type="image/png">
+    <title>GPT 对话</title>
+    <script>
+        (function(){
+            try {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
+                if(theme === 'dark') {
+                    document.documentElement.classList.add('studio-theme-dark');
+                    document.documentElement.classList.add('theme-dark');
+                }
+            } catch(e) {}
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/static/theme.js?v=20260516-theme-sync"></script>
+    <script src="/static/i18n.js?v=20260512-pages"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&display=swap');
+        :root { --ease:cubic-bezier(.4,0,.2,1); --content-width:1160px; }
+        * { box-sizing:border-box; }
+        body { margin:0; height:100vh; overflow:hidden; background:#f8fafc; color:#111827; font-family:'Inter',-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
+        .chat-shell { height:100vh; display:flex; flex-direction:column; min-width:0; }
+        .topbar { height:82px; padding:0 36px; border-bottom:1px solid #eef2f7; background:rgba(248,250,252,.88); backdrop-filter:blur(16px); z-index:5; }
+        .topbar-inner { width:min(var(--content-width),100%); height:100%; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:18px; }
+        .title-block { min-width:0; }
+        .title-block h1 { font-size:14px; font-weight:900; letter-spacing:.28em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .title-block p { margin-top:5px; font-size:10px; color:#94a3b8; font-weight:800; }
+        .top-actions { display:flex; align-items:center; gap:10px; position:relative; }
+        .action-btn { height:40px; min-width:40px; padding:0 12px; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:8px; background:#fff; border:1px solid #e8edf3; color:#475569; font-size:10px; font-weight:900; letter-spacing:.14em; transition:all .2s var(--ease); }
+        .action-btn:hover { background:#f1f5f9; color:#111827; border-color:#dbe3ec; }
+        .history-popover { position:absolute; top:54px; right:0; width:min(360px,calc(100vw - 36px)); max-height:520px; overflow:hidden; background:#fff; border:1px solid #e8edf3; border-radius:24px; box-shadow:0 24px 60px rgba(15,23,42,.14); padding:12px; display:none; z-index:20; }
+        .history-popover.open { display:block; animation:popIn .18s var(--ease); }
+        .thread-list { max-height:430px; overflow:auto; display:flex; flex-direction:column; gap:8px; padding-right:2px; }
+        .thread-row { display:grid; grid-template-columns:minmax(0,1fr) 34px; gap:6px; align-items:stretch; }
+        .thread-item { width:100%; border:1px solid transparent; background:#f8fafc; border-radius:16px; padding:13px 14px; text-align:left; transition:all .2s var(--ease); min-height:58px; min-width:0; }
+        .thread-item:hover { background:#f1f5f9; }
+        .thread-item.active { background:#111827; color:#fff; box-shadow:0 12px 24px rgba(0,0,0,.12); }
+        .thread-delete { width:34px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:#cbd5e1; transition:all .2s var(--ease); }
+        .thread-delete:hover { background:#fee2e2; color:#dc2626; }
+        .messages { flex:1; overflow:auto; padding:34px 42px 268px; display:flex; flex-direction:column; align-items:center; gap:18px; }
+        .bubble-row { width:min(var(--content-width),100%); display:flex; gap:12px; align-items:flex-end; }
+        .bubble-row.user { justify-content:flex-end; }
+        .bubble { max-width:min(780px,78%); border-radius:24px; padding:15px 18px; font-size:14px; line-height:1.7; white-space:pre-wrap; word-break:break-word; box-shadow:0 1px 0 rgba(0,0,0,.03); }
+        .bubble.user { background:#111827; color:white; border-bottom-right-radius:8px; }
+        .bubble.assistant { background:#fff; border:1px solid #edf2f7; border-bottom-left-radius:8px; }
+        .bubble.assistant.streaming::after { content:""; display:inline-block; width:7px; height:1.2em; margin-left:3px; border-radius:999px; background:#111827; vertical-align:-.2em; animation:cursorBlink .9s steps(2,end) infinite; }
+        .bubble img.generated { display:block; width:min(460px,100%); border-radius:18px; margin-top:10px; border:1px solid rgba(0,0,0,.06); cursor:zoom-in; }
+        .thumbs { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .thumb { width:58px; height:58px; border-radius:14px; object-fit:cover; border:1px solid rgba(255,255,255,.28); }
+        .assistant .thumb { border-color:#e5e7eb; }
+        .composer-wrap { position:absolute; left:0; right:0; bottom:0; padding:24px 42px 30px; background:linear-gradient(to top,#f8fafc 82%,rgba(248,250,252,0)); }
+        .composer { width:min(var(--content-width),100%); margin:0 auto; min-height:184px; background:rgba(255,255,255,.96); border:1px solid #e8edf3; border-radius:30px; box-shadow:0 14px 38px rgba(15,23,42,.08); padding:12px; display:flex; flex-direction:column; gap:10px; }
+        .mode-switch { background:#f8fafc; border:1px solid #edf2f7; border-radius:999px; padding:2px; display:flex; gap:2px; }
+        .mode-switch button { height:30px; min-width:70px; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:5px; color:#64748b; font-size:10px; font-weight:600; letter-spacing:.02em; transition:all .2s var(--ease); }
+        .mode-switch button.active { background:#fff; color:#111827; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+        /* Provider Switch */
+        .provider-switch { background:#f8fafc; border:1px solid #edf2f7; border-radius:999px; padding:2px; display:grid; grid-template-columns:1fr 1fr; gap:2px; }
+        .provider-switch button { height:30px; padding:0 10px; white-space:nowrap; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:5px; color:#64748b; font-size:10px; font-weight:600; letter-spacing:.02em; transition:all .2s var(--ease); }
+        .provider-switch button.active { background:#fff; color:#111827; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+        .provider-select { min-width:112px; height:30px; border:0; border-radius:999px; background:#fff; color:#111827; padding:0 10px; outline:none; font-size:10px; font-weight:700; }
+        .image-controls { display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; }
+        .image-controls.hidden { display:none; }
+        .mini-ratio { display:flex; gap:2px; background:#f8fafc; border:1px solid #edf2f7; border-radius:999px; padding:2px; overflow:auto; }
+        .mini-ratio button { height:28px; min-width:42px; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:4px; color:#64748b; font-size:10px; font-weight:600; letter-spacing:0; transition:all .2s var(--ease); }
+        .mini-ratio button.active { background:#fff; color:#111827; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+        .resolution-toggle { flex:0 0 auto; background:#f8fafc; border:1px solid #edf2f7; border-radius:999px; padding:2px; display:flex; gap:2px; }
+        .resolution-option { height:28px; min-width:40px; border-radius:999px; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:10px; font-weight:600; transition:all .2s var(--ease); }
+        .resolution-option.active { background:#fff; color:#111827; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+        .composer-body { min-height:148px; border:1px solid #f1f5f9; background:#fbfdff; border-radius:22px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+        .composer-body.drag-over { border-color:#cbd5e1; background:#f8fafc; box-shadow:inset 0 0 0 1px #e2e8f0; }
+        textarea { width:100%; flex:1; min-height:82px; max-height:168px; resize:none; outline:none; border:0; padding:2px; font-size:14px; line-height:1.65; background:transparent; }
+        .attachment-stack { display:flex; flex-direction:column; align-items:flex-start; gap:8px; min-width:0; }
+        .composer-inside-foot { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
+        .left-tools { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
+        .inline-controls { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
+        .send-btn { width:44px; height:44px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:#111827; color:#fff; transition:all .2s var(--ease); flex:0 0 auto; }
+        .send-btn:disabled { opacity:.45; cursor:not-allowed; }
+        .ref-strip { display:flex; align-items:center; gap:8px; overflow:auto; min-width:0; max-width:680px; min-height:0; }
+        .ref-strip:empty { display:none; }
+        .ref-chip { position:relative; width:54px; height:54px; border-radius:14px; overflow:hidden; border:1px solid #e5e7eb; background:#fff; flex:0 0 auto; }
+        .ref-chip img { width:100%; height:100%; object-fit:cover; }
+        .ref-chip button { position:absolute; top:3px; right:3px; width:18px; height:18px; border-radius:50%; background:rgba(255,255,255,.92); font-size:12px; line-height:18px; }
+        /* MS provider indicator badge */
+        .ms-badge { display:inline-flex; align-items:center; gap:4px; font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; background:#0d1117; color:#7ee787; border-radius:999px; padding:3px 8px; }
+        @keyframes popIn { from { opacity:0; transform:translateY(-6px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes cursorBlink { 0%,45% { opacity:1; } 46%,100% { opacity:0; } }
+        @media (max-width:900px){
+            .topbar { padding-left:18px; padding-right:18px; }
+            .messages { padding:24px 18px 360px; }
+            .composer-wrap { padding:20px 18px 24px; }
+            .composer { min-height:296px; }
+            .inline-controls { align-items:stretch; flex-direction:column; flex:1; }
+            .image-controls { align-items:stretch; flex-direction:column; }
+            .resolution-toggle { align-self:flex-start; }
+            .composer-inside-foot { align-items:flex-end; }
+            .ref-strip { max-width:100%; }
+            .bubble { max-width:88%; }
+            .action-btn span { display:none; }
+        }
+    </style>
+    <link rel="stylesheet" href="/static/theme.css?v=20260510-studio-pages-blue-dark10">
+</head>
+<body>
+    <div class="chat-shell">
+        <header class="topbar">
+            <div class="topbar-inner">
+                <div class="title-block">
+                    <h1 id="chatTitle" data-i18n="chat.newConversation">新对话</h1>
+                    <p id="modelLabel">Ready</p>
+                </div>
+                <div class="top-actions">
+                    <button onclick="newConversation()" class="action-btn" title="新建对话" data-i18n-title="chat.newConversation"><i data-lucide="plus" class="w-4 h-4"></i><span data-i18n="chat.new">NEW</span></button>
+                    <button onclick="toggleHistory()" class="action-btn" title="历史对话" data-i18n-title="chat.history"><i data-lucide="history" class="w-4 h-4"></i><span data-i18n="chat.history">HISTORY</span></button>
+                    <div id="historyPopover" class="history-popover">
+                        <div class="flex items-center justify-between px-2 pb-3">
+                            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400" data-i18n="chat.historyTitle">Conversations</span>
+                            <button onclick="toggleHistory(false)" class="text-gray-400 hover:text-black"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        </div>
+                        <div id="threadList" class="thread-list"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section id="messages" class="messages"></section>
+
+        <div class="composer-wrap">
+            <div class="composer">
+                <div id="composerBody" class="composer-body">
+                    <textarea id="messageInput" rows="4" placeholder="输入消息，Enter 发送..." data-i18n-placeholder="chat.inputPlaceholder" oninput="autoGrow(this)" onkeydown="handleKey(event)"></textarea>
+                    <div id="refStrip" class="ref-strip"></div>
+                    <div class="composer-inside-foot">
+                        <div class="left-tools">
+                            <div class="inline-controls">
+                                <div class="mode-switch">
+                                    <button id="chatModeBtn" class="active" onclick="setMode('chat')"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i><span data-i18n="chat.chatMode">Chat</span></button>
+                                    <button id="imageModeBtn" onclick="setMode('image')"><i data-lucide="image-plus" class="w-3.5 h-3.5"></i><span data-i18n="chat.imageMode">Image</span></button>
+                                </div>
+                                <div id="providerSwitchWrap" class="provider-switch">
+                                    <select id="providerSelect" class="provider-select" onchange="setProvider(this.value)"></select>
+                                    <select id="modelSelect" class="provider-select" onchange="setActiveModel(this.value)"></select>
+                                </div>
+                                <div id="imageControls" class="image-controls hidden">
+                                    <div class="mini-ratio">
+                                        <button id="chat-ratio-square" class="active" onclick="setChatRatio('square')"><i data-lucide="square" class="w-3 h-3"></i>1:1</button>
+                                        <button id="chat-ratio-portrait" onclick="setChatRatio('portrait')"><i data-lucide="rectangle-vertical" class="w-3 h-3"></i>2:3</button>
+                                        <button id="chat-ratio-landscape" onclick="setChatRatio('landscape')"><i data-lucide="rectangle-horizontal" class="w-3 h-3"></i>3:2</button>
+                                        <button id="chat-ratio-portrait43" onclick="setChatRatio('portrait43')"><i data-lucide="rectangle-vertical" class="w-3 h-3"></i>3:4</button>
+                                        <button id="chat-ratio-landscape43" onclick="setChatRatio('landscape43')"><i data-lucide="rectangle-horizontal" class="w-3 h-3"></i>4:3</button>
+                                        <button id="chat-ratio-story" onclick="setChatRatio('story')"><i data-lucide="smartphone" class="w-3 h-3"></i>9:16</button>
+                                        <button id="chat-ratio-wide" onclick="setChatRatio('wide')"><i data-lucide="monitor" class="w-3 h-3"></i>16:9</button>
+                                    </div>
+                                    <div class="resolution-toggle" title="分辨率" data-i18n-title="chat.resolution">
+                                        <button id="chat-res-1k" class="resolution-option active" onclick="setChatResolution('1k')">1K</button>
+                                        <button id="chat-res-2k" class="resolution-option" onclick="setChatResolution('2k')">2K</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="sendBtn" onclick="sendMessage()" class="send-btn" title="发送" data-i18n-title="chat.send"><i data-lucide="send" class="w-5 h-5"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        function tr(key){ return window.StudioI18n ? StudioI18n.t(key) : key; }
+        function defaultTitle(){ return tr('chat.newConversation'); }
+        function setChatTitle(title){
+            document.getElementById('chatTitle').textContent = title || defaultTitle();
+        }
+        function applyLanguage(lang){
+            if(lang && window.StudioI18n) StudioI18n.set(lang);
+            document.title = tr('chat.title');
+            if(!currentConversation?.title || currentConversation.title === '新对话' || currentConversation.title === 'New Chat') setChatTitle('');
+            renderThreads();
+        }
+        window.addEventListener('message', event => {
+            if(event.data?.type === 'studio-lang') applyLanguage(event.data.lang);
+        });
+        window.addEventListener('studio-lang-change', () => {
+            document.title = tr('chat.title');
+            if(!currentConversation?.title || currentConversation.title === '新对话' || currentConversation.title === 'New Chat') setChatTitle('');
+            renderThreads();
+        });
+        function uuid(){
+            if(crypto?.randomUUID) return crypto.randomUUID();
+            return 'u-' + Math.random().toString(16).slice(2) + Date.now();
+        }
+
+        const USER_KEY = 'gpt_chat_browser_user';
+        const userId = localStorage.getItem(USER_KEY) || uuid();
+        localStorage.setItem(USER_KEY, userId);
+
+        let conversations = [];
+        let currentConversation = null;
+        let mode = 'chat';
+        let provider = 'comfly';
+        let msModel = '';
+        let activeChatModel = '';
+        let activeImageProvider = 'comfly';
+        let activeImageModel = '';
+        let apiProviders = [];
+        let chatProviderModels = {};
+        let chatRatio = 'square';
+        let chatResolution = '1k';
+        let refs = [];
+        let config = { chat_model: 'gpt-5.5', image_model: 'gpt-image-2', ms_chat_models: [] };
+
+        const SIZE_OPTIONS = {
+            square: [['1024x1024','1k'], ['1536x1536','2k']],
+            portrait: [['720x1080','1k'], ['1024x1536','2k']],
+            portrait43: [['1008x1344','1k'], ['1536x2048','2k']],
+            landscape43: [['1344x1008','1k'], ['2048x1536','2k']],
+            landscape: [['1080x720','1k'], ['1536x1024','2k']],
+            story: [['720x1280','1k'], ['1080x1920','2k']],
+            wide: [['1280x720','1k'], ['1920x1080','2k']]
+        };
+
+        const headers = () => ({'Content-Type':'application/json', 'X-User-ID':userId});
+
+        function uniqueModels(list){
+            const seen = new Set();
+            return (list || []).map(item => String(item || '').trim()).filter(item => item && !seen.has(item) && seen.add(item));
+        }
+        function chatProviders(){
+            const list = (apiProviders || []).filter(p => p.enabled !== false && (p.chat_models || []).length);
+            if(config.ms_chat_models?.length && !list.some(p => p.id === 'modelscope')) list.push({id:'modelscope', name:'ModelScope', chat_models:config.ms_chat_models, image_models:[]});
+            return list.length ? list : [{id:'comfly', name:'API', chat_models:[config.chat_model || 'gpt-4o-mini'], image_models:[config.image_model || 'gpt-image-2']}];
+        }
+        function imageProviders(){
+            const list = (apiProviders || []).filter(p => p.enabled !== false && (p.image_models || []).length);
+            return list.length ? list : [{id:'comfly', name:'API', image_models:[config.image_model || 'gpt-image-2'], chat_models:[config.chat_model || 'gpt-4o-mini']}];
+        }
+        function providerById(id, kind='chat'){
+            const list = kind === 'image' ? imageProviders() : chatProviders();
+            return list.find(p => p.id === id) || list[0];
+        }
+        function currentProviderId(){
+            return mode === 'image' ? activeImageProvider : provider;
+        }
+        function modelListForCurrent(){
+            const item = providerById(currentProviderId(), mode === 'image' ? 'image' : 'chat');
+            return uniqueModels(mode === 'image' ? item.image_models : item.chat_models);
+        }
+        function currentModel(){
+            return mode === 'image' ? activeImageModel : (provider === 'modelscope' ? (msModel || activeChatModel) : activeChatModel);
+        }
+        function renderProviderControls(){
+            const providerSelect = document.getElementById('providerSelect');
+            const modelSelect = document.getElementById('modelSelect');
+            const providers = mode === 'image' ? imageProviders() : chatProviders();
+            const pid = currentProviderId();
+            if(!providers.some(p => p.id === pid)) {
+                if(mode === 'image') activeImageProvider = providers[0]?.id || 'comfly';
+                else provider = providers[0]?.id || 'comfly';
+            }
+            const models = modelListForCurrent();
+            if(mode === 'image' && !models.includes(activeImageModel)) activeImageModel = models[0] || config.image_model;
+            if(mode === 'chat' && !models.includes(activeChatModel)) activeChatModel = chatProviderModels[provider] && models.includes(chatProviderModels[provider]) ? chatProviderModels[provider] : (models[0] || config.chat_model);
+            if(mode === 'chat' && provider === 'modelscope') msModel = activeChatModel;
+            providerSelect.innerHTML = providers.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === currentProviderId() ? 'selected' : ''}>${escapeHtml(p.name || p.id)}</option>`).join('');
+            modelSelect.innerHTML = models.map(m => `<option value="${escapeHtml(m)}" ${m === currentModel() ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('');
+        }
+
+        async function loadConfig(){
+            try {
+                const data = await fetch('/api/config').then(r=>r.json());
+                config = { ...config, ...data };
+                apiProviders = Array.isArray(config.api_providers) ? config.api_providers : [];
+                config.chat_model = (config.chat_models || []).find(m => m === 'gpt-5.5') || config.chat_model || 'gpt-5.5';
+                config.image_model = config.image_model || ((config.image_models || [])[0]) || 'gpt-image-2';
+                const chatProviderList = chatProviders();
+                provider = chatProviderList.some(p => p.id === provider) ? provider : (chatProviderList[0]?.id || 'comfly');
+                activeChatModel = chatProviderModels[provider] || providerById(provider, 'chat')?.chat_models?.[0] || config.chat_model;
+                activeImageProvider = imageProviders()[0]?.id || 'comfly';
+                activeImageModel = imageProviders()[0]?.image_models?.[0] || config.image_model;
+                // Default MS model to first in list
+                if (config.ms_chat_models?.length) msModel = config.ms_chat_models[0];
+                renderProviderControls();
+                updateModelLabel();
+            } catch(e) {}
+        }
+        try {
+            const apiChannel = new BroadcastChannel('studio-api');
+            apiChannel.onmessage = async (e) => {
+                if(e.data?.type === 'providers-changed'){
+                    await loadConfig();
+                    renderProviderControls();
+                    updateModelLabel();
+                }
+            };
+        } catch(e) {}
+
+        function setProvider(p) {
+            if(mode === 'image') activeImageProvider = p;
+            else provider = p;
+            const models = modelListForCurrent();
+            if(mode === 'image') activeImageModel = models[0] || activeImageModel;
+            else {
+                activeChatModel = chatProviderModels[provider] && models.includes(chatProviderModels[provider]) ? chatProviderModels[provider] : (models[0] || activeChatModel);
+                if(provider === 'modelscope') msModel = activeChatModel;
+            }
+            renderProviderControls();
+            updateModelLabel();
+        }
+        function setActiveModel(model){
+            if(mode === 'image') activeImageModel = model;
+            else {
+                activeChatModel = model;
+                chatProviderModels[provider] = model;
+                if(provider === 'modelscope') msModel = model;
+            }
+            updateModelLabel();
+        }
+
+        async function loadConversations(){
+            const data = await fetch('/api/conversations', {headers:{'X-User-ID':userId}}).then(r=>r.json());
+            conversations = data.conversations || [];
+            renderThreads();
+            if(!currentConversation && conversations[0]) await openConversation(conversations[0].id);
+            if(!currentConversation) renderMessages([]);
+        }
+
+        function renderThreads(){
+            const list = document.getElementById('threadList');
+            list.innerHTML = '';
+            if(!conversations.length){
+                list.innerHTML = `<div class="px-3 py-8 text-center text-[11px] font-bold text-gray-300 uppercase tracking-widest">${tr('chat.noHistory')}</div>`;
+                return;
+            }
+            conversations.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'thread-row';
+                const btn = document.createElement('button');
+                btn.className = `thread-item ${currentConversation?.id === item.id ? 'active' : ''}`;
+                btn.onclick = () => openConversation(item.id, true);
+                btn.innerHTML = `<div class="text-sm font-bold truncate">${escapeHtml(item.title || defaultTitle())}</div><div class="text-[11px] opacity-50 truncate mt-1">${escapeHtml(item.last_message || '')}</div>`;
+                const del = document.createElement('button');
+                del.className = 'thread-delete';
+                del.title = tr('chat.deleteTitle');
+                del.onclick = (event) => deleteConversation(item.id, event);
+                del.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i>';
+                row.appendChild(btn);
+                row.appendChild(del);
+                list.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        async function newConversation(){
+            const data = await fetch('/api/conversations', {method:'POST', headers:headers(), body:JSON.stringify({title:'新对话'})}).then(r=>r.json());
+            currentConversation = data.conversation;
+            setChatTitle(currentConversation.title);
+            await loadConversations();
+            renderMessages([]);
+            toggleHistory(false);
+        }
+
+        async function openConversation(id, closePanel=false){
+            const data = await fetch(`/api/conversations/${id}`, {headers:{'X-User-ID':userId}}).then(r=>r.json());
+            currentConversation = data.conversation;
+            setChatTitle(currentConversation.title);
+            renderThreads();
+            renderMessages(currentConversation.messages || []);
+            if(closePanel) toggleHistory(false);
+        }
+
+        async function deleteConversation(id, event){
+            event.stopPropagation();
+            if(!confirm(tr('chat.deleteConfirm'))) return;
+            await fetch(`/api/conversations/${id}`, {method:'DELETE', headers:{'X-User-ID':userId}});
+            const deletedCurrent = currentConversation?.id === id;
+            if(deletedCurrent){ currentConversation = null; setChatTitle(''); renderMessages([]); }
+            await loadConversations();
+            if(deletedCurrent && conversations[0]) await openConversation(conversations[0].id);
+        }
+
+        function toggleHistory(force){
+            const pop = document.getElementById('historyPopover');
+            const shouldOpen = typeof force === 'boolean' ? force : !pop.classList.contains('open');
+            pop.classList.toggle('open', shouldOpen);
+            if(shouldOpen) lucide.createIcons();
+        }
+
+        document.addEventListener('click', (event) => {
+            const actions = document.querySelector('.top-actions');
+            if(actions && !actions.contains(event.target)) toggleHistory(false);
+        });
+
+        function setMode(next){
+            mode = next;
+            document.getElementById('chatModeBtn').classList.toggle('active', next === 'chat');
+            document.getElementById('imageModeBtn').classList.toggle('active', next === 'image');
+            document.getElementById('imageControls').classList.toggle('hidden', next !== 'image');
+            renderProviderControls();
+            updateModelLabel();
+        }
+
+        function updateModelLabel(){
+            let label = '';
+            if (mode === 'image') {
+                label = activeImageModel || config.image_model || 'Image';
+            } else if (provider === 'modelscope') {
+                label = msModel || (config.ms_chat_models?.[0]) || 'ModelScope';
+                // Shorten the display label
+                label = label.split('/').pop().split(':')[0];
+            } else {
+                label = activeChatModel || config.chat_model || 'Chat';
+            }
+            document.getElementById('modelLabel').textContent = label;
+        }
+
+        function setChatRatio(next, preferredSize = ''){
+            chatRatio = next;
+            ['square','portrait','portrait43','landscape43','landscape','story','wide'].forEach(item => {
+                document.getElementById(`chat-ratio-${item}`).classList.toggle('active', item === next);
+            });
+            if(preferredSize){ const match = SIZE_OPTIONS[next].find(([value]) => value === preferredSize); if(match) chatResolution = match[1]; }
+            updateChatResolutionUI();
+        }
+
+        function setChatResolution(next){ chatResolution = next; updateChatResolutionUI(); }
+        function updateChatResolutionUI(){
+            document.getElementById('chat-res-1k').classList.toggle('active', chatResolution === '1k');
+            document.getElementById('chat-res-2k').classList.toggle('active', chatResolution === '2k');
+        }
+
+        function currentChatSize(){
+            const options = SIZE_OPTIONS[chatRatio] || SIZE_OPTIONS.square;
+            const match = options.find(([, label]) => label === chatResolution) || options[0];
+            return match[0];
+        }
+
+        function renderMessages(messages){
+            const box = document.getElementById('messages');
+            box.innerHTML = '';
+            if(!messages.length){
+                box.innerHTML = `<div class="m-auto text-center opacity-20"><i data-lucide="messages-square" class="w-14 h-14 mx-auto stroke-[1px]"></i><div class="text-[10px] font-black tracking-[0.5em] uppercase mt-4">${tr('chat.ready')}</div></div>`;
+                lucide.createIcons();
+                return;
+            }
+            messages.forEach(addMessageBubble);
+            scrollBottom();
+        }
+
+        function addMessageBubble(msg){
+            const box = document.getElementById('messages');
+            const row = document.createElement('div');
+            row.className = `bubble-row ${msg.role === 'user' ? 'user' : 'assistant'}`;
+            const bubble = document.createElement('div');
+            bubble.className = `bubble ${msg.role === 'user' ? 'user' : 'assistant'}`;
+            const text = document.createElement('div');
+            text.textContent = msg.type === 'image' ? tr('chat.generated') : (msg.content || '');
+            text.className = 'bubble-text';
+            bubble.appendChild(text);
+            if(msg.attachments?.length){
+                const thumbs = document.createElement('div');
+                thumbs.className = 'thumbs';
+                msg.attachments.forEach(ref => thumbs.insertAdjacentHTML('beforeend', `<img class="thumb" src="${ref.url}">`));
+                bubble.appendChild(thumbs);
+            }
+            if(msg.image_url){
+                const img = document.createElement('img');
+                img.className = 'generated';
+                img.src = msg.image_url;
+                img.onclick = () => window.open(msg.image_url, '_blank');
+                bubble.appendChild(img);
+            }
+            // Show model badge for assistant messages
+            if(msg.role === 'assistant' && msg.model){
+                const badge = document.createElement('div');
+                const modelShort = msg.model.split('/').pop().split(':')[0];
+                const isMs = msg.model.includes('/') && !msg.model.includes('gpt');
+                badge.style.cssText = `margin-top:8px;font-size:9px;font-weight:700;opacity:.45;letter-spacing:.06em;`;
+                badge.textContent = modelShort;
+                bubble.appendChild(badge);
+            }
+            row.appendChild(bubble);
+            box.appendChild(row);
+            return {row, bubble, text};
+        }
+
+        async function uploadFiles(files){
+            if(!files?.length) return;
+            const form = new FormData();
+            [...files].slice(0, 4 - refs.length).forEach(file => form.append('files', file));
+            const data = await fetch('/api/ai/upload', {method:'POST', body:form}).then(r=>r.json());
+            refs.push(...(data.files || []));
+            renderRefs();
+        }
+
+        function renderRefs(){
+            const strip = document.getElementById('refStrip');
+            strip.innerHTML = refs.map((ref,i) => `<div class="ref-chip"><img src="${ref.url}"><button onclick="removeRef(${i})">×</button></div>`).join('');
+        }
+
+        function removeRef(i){ refs.splice(i,1); renderRefs(); }
+
+        window.addEventListener('paste', e => {
+            const files = [...(e.clipboardData?.items || [])].filter(x => x.kind === 'file' && x.type.startsWith('image/')).map(x => x.getAsFile());
+            if(files.length) uploadFiles(files);
+        });
+
+        const composerBody = document.getElementById('composerBody');
+        composerBody.addEventListener('dragover', e => {
+            if(!hasImageFiles(e.dataTransfer?.items)) return;
+            e.preventDefault();
+            composerBody.classList.add('drag-over');
+        });
+        composerBody.addEventListener('dragleave', e => {
+            if(!composerBody.contains(e.relatedTarget)) composerBody.classList.remove('drag-over');
+        });
+        composerBody.addEventListener('drop', e => {
+            if(!hasImageFiles(e.dataTransfer?.items)) return;
+            e.preventDefault();
+            composerBody.classList.remove('drag-over');
+            const files = [...(e.dataTransfer?.files || [])].filter(file => file.type.startsWith('image/'));
+            uploadFiles(files);
+        });
+
+        function hasImageFiles(items){ return [...(items || [])].some(item => item.kind === 'file' && item.type.startsWith('image/')); }
+        function autoGrow(el){ el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 150) + 'px'; }
+        function handleKey(e){ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); } }
+
+        async function sendMessage(){
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if(!message) return;
+            const btn = document.getElementById('sendBtn');
+            btn.disabled = true;
+            const pendingRefs = refs.slice();
+            refs = [];
+            renderRefs();
+            input.value = '';
+            autoGrow(input);
+            if(!currentConversation){
+                currentConversation = {id:'', title:'新对话', messages:[]};
+                document.getElementById('messages').innerHTML = '';
+            }
+            addMessageBubble({role:'user', content:message, attachments:pendingRefs});
+            const assistantBubble = addMessageBubble({role:'assistant', content: mode === 'image' ? tr('chat.generatingImage') : ''});
+            if(mode === 'chat') assistantBubble.bubble.classList.add('streaming');
+            scrollBottom();
+            try {
+                if(mode === 'chat') {
+                    await streamChatMessage(message, pendingRefs, assistantBubble);
+                } else {
+                    const data = await fetch('/api/chat', {
+                        method:'POST',
+                        headers:headers(),
+                        body:JSON.stringify({
+                            conversation_id: currentConversation.id || '',
+                            message,
+                            mode,
+                            size: currentChatSize(),
+                            model: activeChatModel || config.chat_model,
+                            image_model: activeImageModel || config.image_model,
+                            reference_images: pendingRefs,
+                            provider: activeImageProvider,
+                        })
+                    }).then(async r => { if(!r.ok) throw new Error((await r.json()).detail || tr('chat.requestFailed')); return r.json(); });
+                    currentConversation = data.conversation;
+                    setChatTitle(currentConversation.title);
+                    renderMessages(currentConversation.messages || []);
+                    await loadConversations();
+                }
+            } catch(err) {
+                renderMessages([...(currentConversation.messages || []), {role:'assistant', content:err.message || tr('chat.requestFailed')}]);
+            } finally {
+                btn.disabled = false;
+                scrollBottom();
+            }
+        }
+
+        async function streamChatMessage(message, pendingRefs, assistantBubble){
+            const currentProvider = provider;
+            const currentMsModel = provider === 'modelscope' ? (msModel || activeChatModel || (config.ms_chat_models?.[0] || '')) : '';
+            const currentChatModel = activeChatModel || config.chat_model;
+
+            const res = await fetch('/api/chat/stream', {
+                method:'POST',
+                headers:headers(),
+                body:JSON.stringify({
+                    conversation_id: currentConversation.id || '',
+                    message,
+                    mode:'chat',
+                    model: currentProvider === 'modelscope' ? currentMsModel : currentChatModel,
+                    ms_model: currentProvider === 'modelscope' ? currentMsModel : '',
+                    provider: currentProvider,
+                    reference_images: pendingRefs
+                })
+            });
+            if(!res.ok) throw new Error((await res.json()).detail || tr('chat.requestFailed'));
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let fullText = '';
+            while(true){
+                const {value, done} = await reader.read();
+                if(done) break;
+                buffer += decoder.decode(value, {stream:true});
+                const events = buffer.split('\n\n');
+                buffer = events.pop() || '';
+                for(const eventText of events){
+                    const line = eventText.split('\n').find(item => item.startsWith('data:'));
+                    if(!line) continue;
+                    const event = JSON.parse(line.slice(5).trim());
+                    if(event.type === 'meta'){
+                        currentConversation = event.conversation;
+                        setChatTitle(currentConversation.title);
+                    }
+                    if(event.type === 'delta'){
+                        fullText += event.delta || '';
+                        assistantBubble.text.textContent = fullText;
+                        scrollBottom();
+                    }
+                    if(event.type === 'error') throw new Error(event.detail || tr('chat.requestFailed'));
+                    if(event.type === 'done'){
+                        assistantBubble.bubble.classList.remove('streaming');
+                        currentConversation = event.conversation;
+                        setChatTitle(currentConversation.title);
+                        renderMessages(currentConversation.messages || []);
+                        await loadConversations();
+                    }
+                }
+            }
+            assistantBubble.bubble.classList.remove('streaming');
+        }
+
+        function scrollBottom(){ requestAnimationFrame(() => { const box = document.getElementById('messages'); box.scrollTop = box.scrollHeight; }); }
+        function escapeHtml(str){ return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+
+        window.onload = async () => {
+            applyLanguage();
+            setChatRatio('square');
+            setChatResolution('1k');
+            await loadConfig();
+            await loadConversations();
+        };
+    </script>
+</body>
+</html>

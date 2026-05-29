@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 设置</title>
+    <script src="/static/modules/auth-token.js?v=20260525001"></script>
+    <script>
+        (function(){
+            try {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
+                if(theme === 'dark') {
+                    document.documentElement.classList.add('studio-theme-dark');
+                    document.documentElement.classList.add('theme-dark');
+                }
+            } catch(e) {}
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/lucide.min.js?v=20260520001"></script>
+    <script src="/static/theme.js?v=20260516-theme-sync"></script>
+    <script src="/static/i18n.js?v=20260515-image-editor-i18n"></script>
+    <link rel="stylesheet" href="/static/theme.css?v=20260514-api-lora-i18n">
+    <style>
+        :root { --bg:#020617; --panel:#0F172A; --soft:#1E293B; --line:#334155; --line-strong:#475569; --text:#F8FAFC; --muted:#94A3B8; --faint:#64748B; --accent:#00FFFF; --accent-glow:#00B4D8; --neon-cyan:#00FFFF; --neon-blue:#0080FF; }
+        body.studio-theme-dark, html.studio-theme-dark body { --bg:#020617; --panel:#0F172A; --soft:#1E293B; --line:#334155; --line-strong:#475569; --text:#F8FAFC; --muted:#94A3B8; --faint:#64748B; --accent:#00FFFF; --accent-glow:#00B4D8; }
+        * { box-sizing:border-box; }
+        html { min-height:100%; overflow-y:auto; overscroll-behavior:auto; }
+        body { margin:0; min-height:100vh; overflow-y:auto; background:var(--bg); color:var(--text); font-family:'Fira Code',Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; -webkit-overflow-scrolling:touch; overscroll-behavior:auto; }
+        * { scrollbar-width:thin !important; scrollbar-color:rgba(0, 255, 255, 0.3) transparent !important; }
+        *::-webkit-scrollbar { width:10px !important; height:10px !important; background:transparent !important; }
+        *::-webkit-scrollbar-track { background:transparent !important; }
+        *::-webkit-scrollbar-thumb { min-height:36px; background-color:rgba(0, 255, 255, 0.3) !important; border:3px solid transparent !important; border-right-width:3px !important; background-clip:padding-box !important; border-radius:999px !important; }
+        *::-webkit-scrollbar-thumb:hover { background-color:rgba(0, 255, 255, 0.5) !important; }
+        *::-webkit-scrollbar-corner { background:transparent !important; }
+        button { font-family:inherit; cursor:pointer; border:0; background:transparent; color:inherit; }
+        .page { min-height:100vh; padding:40px 32px 80px; background: radial-gradient(ellipse at top, rgba(0, 255, 255, 0.03) 0%, transparent 50%), var(--bg); }
+        .wrap { max-width:1100px; margin:0 auto; }
+        .page-head { padding:0 4px 28px; display:flex; justify-content:space-between; align-items:end; gap:24px; flex-wrap:wrap; }
+        .page-head .title { font-size:26px; line-height:1.05; font-weight:900; letter-spacing:-.015em; color:var(--neon-cyan); text-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
+        .page-head .sub { margin-top:8px; color:var(--muted); font-size:12.5px; line-height:1.55; font-weight:600; max-width:520px; }
+        .page-head .status { color:var(--neon-cyan); font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; min-height:16px; text-shadow: 0 0 8px rgba(0, 255, 255, 0.4); }
+        .layout { display:grid; grid-template-columns:260px minmax(0,1fr); gap:36px; align-items:start; }
+        /* Sidebar */
+        .sidebar { display:flex; flex-direction:column; gap:12px; position:sticky; top:32px; max-height:calc(100vh - 64px); overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px; background:var(--panel); border:1px solid var(--line); border-radius:16px; }
+        .side-section-title { color:var(--faint); font-size:10px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; padding:2px 4px; }
+        .provider-list { display:flex; flex-direction:column; gap:4px; padding-bottom:8px; border-bottom:1px solid var(--line); margin-bottom:4px; }
+        .provider-card { width:100%; text-align:left; border:1px solid transparent; background:transparent; border-radius:12px; padding:8px 10px; display:flex; align-items:center; gap:10px; color:var(--muted); transition:all .15s ease; min-height:48px; }
+        .provider-card:hover { border-color:var(--text); color:var(--text); }
+        .provider-card.active { background:var(--soft); color:var(--text); border-color:transparent; }
+        .provider-card.active:hover { border-color:var(--text); }
+        .provider-card.active .provider-name { color:var(--text); }
+        .provider-card.active .provider-meta { color:var(--muted); }
+        .provider-mark { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; background:var(--soft); color:var(--muted); }
+        .provider-card.active .provider-mark { background:var(--panel); color:var(--text); }
+        .provider-card.provider-card-banner { padding:8px 10px; justify-content:center; min-height:44px; }
+        .provider-card-banner img { height:22px; width:auto; max-width:100%; object-fit:contain; display:block; }
+        .provider-card-banner .ms-icon-dark { display:none; }
+        body.studio-theme-dark .provider-card-banner .ms-icon-light,
+        html.studio-theme-dark body .provider-card-banner .ms-icon-light { display:none; }
+        body.studio-theme-dark .provider-card-banner .ms-icon-dark,
+        html.studio-theme-dark body .provider-card-banner .ms-icon-dark { display:block; }
+        .provider-name { min-width:0; font-size:12.5px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .provider-meta { margin-top:1px; color:var(--faint); font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .add-btn { width:100%; height:40px; border:1px dashed var(--line-strong); border-radius:12px; color:var(--muted); display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size:12px; font-weight:800; transition:all .15s ease; }
+        .add-btn:hover { color:var(--text); border-color:var(--faint); background:var(--soft); }
+        .api-link-btn { width:100%; height:40px; border:1px solid var(--line); border-radius:12px; background:var(--soft); color:var(--text); display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size:12px; font-weight:850; text-decoration:none; transition:all .15s ease; }
+        .api-link-btn:hover { border-color:var(--text); background:var(--text); color:var(--bg); transform:translateY(-1px); box-shadow:0 8px 18px rgba(15,23,42,.12); }
+        body.studio-theme-dark .api-link-btn,
+        html.studio-theme-dark body .api-link-btn { background:#f5f6f8; border-color:#f5f6f8; color:#0e1014; box-shadow:0 8px 18px rgba(0,0,0,.24); }
+        body.studio-theme-dark .api-link-btn:hover,
+        html.studio-theme-dark body .api-link-btn:hover { background:#ffffff; border-color:#ffffff; color:#05070b; }
+        /* Content */
+        .content { display:flex; flex-direction:column; gap:20px; min-width:0; }
+        .content-head { display:flex; align-items:end; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:20px 24px; background:var(--panel); border:1px solid var(--line); border-radius:16px; }
+        .content-head .editor-title { font-size:22px; line-height:1.1; font-weight:900; letter-spacing:-.01em; }
+        .content-head .editor-sub { margin-top:4px; color:var(--muted); font-size:11.5px; font-weight:700; letter-spacing:.02em; }
+        .content-actions { display:flex; gap:8px; align-items:center; }
+        .block { display:flex; flex-direction:column; gap:14px; padding:22px 24px; background:var(--panel); border:1px solid var(--line); border-radius:16px; }
+        .block-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding-bottom:14px; border-bottom:1px solid var(--line); margin-bottom:2px; }
+        .block-head > div { min-width:0; flex:1 1 280px; }
+        .block-title { font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--text); }
+        .block-desc { color:var(--muted); font-size:11.5px; line-height:1.55; font-weight:600; margin-top:4px; max-width:480px; }
+        .form { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        .field { display:flex; flex-direction:column; gap:7px; min-width:0; }
+        .field.full { grid-column:1/-1; }
+        .label { color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.02em; }
+        /* 输入框：外层 frame 提供边框 + padding，内部 input 透明无边框，让文字跟边框有视觉距离 */
+        .field-frame { display:flex; align-items:center; padding:4px; border:1px solid var(--line); border-radius:11px; background:var(--panel); transition:border-color .15s ease; }
+        .field-frame:focus-within { border-color:var(--text); }
+        .field-frame.is-disabled { background:var(--soft); border-color:var(--line); cursor:not-allowed; }
+        .field-frame input { width:100%; height:34px; padding:0 10px; border:0; background:transparent; color:var(--text); outline:none; font-size:13px; font-weight:650; }
+        .field-frame input:disabled { color:var(--muted); cursor:not-allowed; }
+        /* 暗色下让输入框/模型行底色比卡片更浅一档，形成层次 */
+        body.studio-theme-dark .field-frame { background:var(--soft); border-color:var(--line-strong); }
+        body.studio-theme-dark .field-frame:focus-within { border-color:#f5f6f8; }
+        .hint { color:var(--faint); font-size:11px; line-height:1.5; font-weight:600; }
+        /* Key row */
+        .key-row { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:8px; align-items:center; }
+        .key-row .field-frame { width:100%; }
+        .verify-action-row { grid-column:1/-1; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .key-btn { width:44px; height:44px; border-radius:11px; display:flex; align-items:center; justify-content:center; border:1px solid var(--line); background:var(--panel); color:var(--muted); transition:all .15s ease; }
+        .key-btn:hover { color:var(--text); border-color:var(--text); }
+        body.studio-theme-dark .key-btn { background:var(--soft); border-color:var(--line-strong); }
+        body.studio-theme-dark .key-btn:hover { background:#323540; border-color:#f5f6f8; }
+        .key-btn.key-clear:hover { color:#dc2626; border-color:#fca5a5; background:#fff5f5; }
+        body.studio-theme-dark .key-btn.key-clear:hover { background:rgba(127,29,29,.18); border-color:rgba(248,113,113,.3); color:#fca5a5; }
+        /* Models */
+        .block.models-toolbar { display:flex; flex-direction:row; align-items:center; justify-content:space-between; gap:12px; padding:8px 18px 12px; }
+        .models-toolbar > div:first-child { min-width:0; flex:1 1 320px; }
+        .models-toolbar-actions { display:flex; gap:8px; align-items:center; justify-content:flex-end; flex:0 0 auto; }
+        .model-grid { display:grid; grid-template-columns:1fr; gap:20px; }
+        .model-list { display:flex; flex-direction:column; gap:6px; }
+        .model-row { display:grid; grid-template-columns:minmax(0,1fr) 36px; align-items:center; gap:6px; padding:4px; border:1px solid var(--line); border-radius:11px; background:var(--panel); }
+        body.studio-theme-dark .model-row { background:var(--soft); border-color:var(--line-strong); }
+        .model-row input { height:34px; padding:0 10px; border:0; background:transparent; font-size:12.5px; }
+        .ms-lora-block { display:none; }
+        body.show-ms .ms-lora-block { display:flex; }
+        .lora-list { display:flex; flex-direction:column; gap:8px; }
+        .lora-row { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1.1fr) 86px 36px; gap:8px; align-items:end; padding:10px; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+        body.studio-theme-dark .lora-row { background:var(--soft); border-color:var(--line-strong); }
+        .lora-field { display:flex; flex-direction:column; gap:5px; min-width:0; }
+        .lora-field span { color:var(--faint); font-size:10px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; }
+        .lora-field input,.lora-field select { width:100%; height:34px; padding:0 9px; border:1px solid var(--line); border-radius:9px; background:var(--soft); color:var(--text); outline:none; font-size:12px; font-weight:700; min-width:0; }
+        body.studio-theme-dark .lora-field input, body.studio-theme-dark .lora-field select { background:var(--panel); border-color:var(--line-strong); }
+        .lora-empty { padding:18px; border:1px dashed var(--line); border-radius:11px; color:var(--faint); text-align:center; font-size:11.5px; font-weight:700; }
+        .icon-btn { width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:var(--faint); transition:all .15s ease; }
+        .icon-btn:hover { color:#dc2626; background:#fff5f5; }
+        body.studio-theme-dark .icon-btn:hover { background:rgba(127,29,29,.18); color:#fca5a5; }
+        .ghost-btn { height:32px; padding:0 12px; border-radius:9px; border:1px solid var(--line); color:var(--muted); display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size:11.5px; font-weight:750; transition:all .15s ease; }
+        .ghost-btn:hover { color:var(--text); border-color:var(--text); }
+        /* 顶部操作栏统一按钮 */
+        .action-btn { height:36px; padding:0 14px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size:12px; font-weight:800; transition:all .15s ease; border:1px solid var(--line); background:var(--panel); color:var(--muted); }
+        .action-btn:hover { color:var(--text); border-color:var(--text); }
+        .action-btn.primary-btn { color:var(--text); border-color:var(--line-strong); background:var(--soft); }
+        .action-btn.primary-btn:hover { background:var(--text); color:var(--bg); border-color:var(--text); }
+        .action-btn.danger-btn { color:#dc2626; border-color:#fecaca; background:transparent; }
+        .action-btn.danger-btn:hover { background:#fff5f5; color:#dc2626; border-color:#fca5a5; }
+        body.studio-theme-dark .action-btn.danger-btn,
+        html.studio-theme-dark body .action-btn.danger-btn { color:#fecaca; border-color:rgba(248,113,113,.55); background:rgba(127,29,29,.28); }
+        body.studio-theme-dark .action-btn.danger-btn:hover,
+        html.studio-theme-dark body .action-btn.danger-btn:hover { background:#7f1d1d; color:#fff; border-color:#f87171; box-shadow:0 8px 18px rgba(127,29,29,.28); }
+        .action-btn.save-btn { background:var(--accent); color:var(--bg); border-color:var(--accent); }
+        .action-btn.save-btn:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(15,23,42,.15); background:var(--accent); color:var(--bg); border-color:var(--accent); }
+        body.studio-theme-dark .action-btn.save-btn,
+        html.studio-theme-dark body .action-btn.save-btn { background:#f5f6f8; color:#0e1014; border-color:#f5f6f8; box-shadow:0 8px 18px rgba(0,0,0,.22); }
+        body.studio-theme-dark .action-btn.save-btn:hover,
+        html.studio-theme-dark body .action-btn.save-btn:hover { background:#ffffff; color:#05070b; border-color:#ffffff; box-shadow:0 10px 22px rgba(0,0,0,.3); }
+        body.studio-theme-dark .api-page-save-btn,
+        html.studio-theme-dark body .api-page-save-btn,
+        body.theme-dark .api-page-save-btn {
+            background:#f8fafc !important;
+            color:#020617 !important;
+            border-color:#ffffff !important;
+            box-shadow:0 8px 20px rgba(0,0,0,.32), inset 0 0 0 1px rgba(15,23,42,.08) !important;
+        }
+        body.studio-theme-dark .api-page-save-btn:hover,
+        html.studio-theme-dark body .api-page-save-btn:hover,
+        body.theme-dark .api-page-save-btn:hover {
+            background:#ffffff !important;
+            color:#020617 !important;
+            border-color:#ffffff !important;
+            transform:translateY(-1px);
+            box-shadow:0 12px 26px rgba(0,0,0,.4), inset 0 0 0 1px rgba(15,23,42,.08) !important;
+        }
+        body.studio-theme-dark .api-page-delete-btn,
+        html.studio-theme-dark body .api-page-delete-btn,
+        body.theme-dark .api-page-delete-btn {
+            background:transparent !important;
+            color:#b91c1c !important;
+            border-color:#b91c1c !important;
+            box-shadow:none !important;
+        }
+        body.studio-theme-dark .api-page-delete-btn:hover,
+        html.studio-theme-dark body .api-page-delete-btn:hover,
+        body.theme-dark .api-page-delete-btn:hover {
+            background:#7f1d1d !important;
+            color:#ffffff !important;
+            border-color:#b91c1c !important;
+            transform:translateY(-1px);
+            box-shadow:0 10px 22px rgba(127,29,29,.3) !important;
+        }
+        /* MS 使用提示（按 provider 显示） */
+        /* 模型选择器浮层 */
+        .picker-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,.45); z-index:99; align-items:center; justify-content:center; padding:32px; }
+        body.studio-theme-dark .picker-overlay { background:rgba(0,0,0,.62); }
+        .picker-modal { width:100%; max-width:780px; max-height:90vh; background:var(--panel); border:1px solid var(--line-strong); border-radius:18px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 28px 64px rgba(15,23,42,.25); }
+        .picker-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line); }
+        .picker-title { font-size:15px; font-weight:900; color:var(--text); }
+        .picker-count { font-size:11px; color:var(--muted); font-weight:700; margin-top:2px; }
+        .picker-close { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--muted); cursor:pointer; transition:all .15s ease; }
+        .picker-close:hover { background:var(--soft); color:var(--text); }
+        .picker-toolbar { display:flex; align-items:center; gap:10px; padding:12px 20px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+        .picker-search { flex:1; min-width:160px; height:34px; padding:0 12px; border:1px solid var(--line); border-radius:9px; background:var(--soft); color:var(--text); outline:none; font-size:12.5px; }
+        .picker-search:focus { border-color:var(--text); background:var(--panel); }
+        .picker-cat-tabs { display:flex; gap:4px; background:var(--soft); padding:3px; border-radius:9px; border:1px solid var(--line); }
+        .picker-cat-tab { height:28px; padding:0 10px; border-radius:6px; display:inline-flex; align-items:center; gap:5px; color:var(--muted); font-size:11px; font-weight:800; cursor:pointer; }
+        .picker-cat-tab:hover { color:var(--text); }
+        .picker-cat-tab.active { background:var(--panel); color:var(--text); box-shadow:0 1px 2px rgba(15,23,42,.06); }
+        .picker-cat-tab .cat-count { font-size:10px; padding:1px 5px; border-radius:5px; background:var(--line); color:var(--muted); font-weight:800; }
+        .picker-cat-tab.active .cat-count { background:var(--soft); color:var(--text); }
+        .picker-body { flex:1; overflow:auto; -webkit-overflow-scrolling:touch; padding:8px 12px 12px; }
+        .picker-row { display:flex; align-items:center; gap:12px; padding:11px 12px; border-bottom:1px solid var(--line); cursor:pointer; transition:background .12s ease; }
+        .picker-row:hover { background:var(--soft); }
+        .picker-row.has-sel { background:rgba(15,23,42,.04); }
+        body.studio-theme-dark .picker-row.has-sel { background:rgba(255,255,255,.04); }
+        .picker-checkbox { width:18px; height:18px; border:1.5px solid var(--line-strong); border-radius:5px; display:flex; align-items:center; justify-content:center; background:var(--panel); flex:0 0 auto; color:var(--bg); transition:all .15s ease; }
+        .picker-row:hover .picker-checkbox { border-color:var(--text); }
+        .picker-checkbox.checked { background:var(--text); border-color:var(--text); }
+        body.studio-theme-dark .picker-checkbox.checked { background:#f5f6f8; border-color:#f5f6f8; color:#0e1014; }
+        .picker-checkbox svg { width:12px; height:12px; opacity:0; }
+        .picker-checkbox.checked svg { opacity:1; }
+        .picker-model-name { min-width:0; flex:1; font-size:13px; font-weight:650; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+        .picker-row.has-sel .picker-model-name { font-weight:850; }
+        /* 当前模型在其他类别中也被选中时，右侧显示提示标签 */
+        .picker-other-cats { display:flex; gap:4px; flex:0 0 auto; }
+        .picker-other-tag { font-size:9.5px; font-weight:800; padding:2px 6px; border-radius:5px; letter-spacing:.04em; }
+        .picker-other-tag.cat-image { background:rgba(16,185,129,.14); color:#047857; }
+        .picker-other-tag.cat-chat { background:rgba(59,130,246,.14); color:#1d4ed8; }
+        .picker-other-tag.cat-video { background:rgba(245,158,11,.14); color:#b45309; }
+        body.studio-theme-dark .picker-other-tag.cat-image { background:rgba(16,185,129,.2); color:#34d399; }
+        body.studio-theme-dark .picker-other-tag.cat-chat { background:rgba(96,165,250,.2); color:#60a5fa; }
+        body.studio-theme-dark .picker-other-tag.cat-video { background:rgba(251,191,36,.2); color:#fbbf24; }
+        /* 底部汇总条 */
+        .picker-summary { display:flex; align-items:center; gap:10px; padding:11px 20px; background:#eef2f7; border-top:1px solid #d7dee9; font-size:11.5px; font-weight:800; color:#334155; flex-wrap:wrap; }
+        .picker-summary-title { font-weight:900; color:#0f172a; }
+        .picker-sum-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:8px; font-weight:900; font-size:11.5px; color:#fff; background:#1f2937; box-shadow:inset 0 0 0 1px rgba(255,255,255,.18), 0 1px 2px rgba(15,23,42,.14); }
+        body.studio-theme-dark .picker-summary,
+        html.studio-theme-dark body .picker-summary { background:#141a25; border-top-color:#2b3444; color:#cbd5e1; }
+        body.studio-theme-dark .picker-summary-title,
+        html.studio-theme-dark body .picker-summary-title { color:#f8fafc; }
+        body.studio-theme-dark .picker-sum-chip,
+        html.studio-theme-dark body .picker-sum-chip { background:#e2e8f0; color:#0f172a; box-shadow:inset 0 0 0 1px rgba(15,23,42,.12), 0 1px 2px rgba(0,0,0,.28); }
+        .picker-sum-chip-empty { background:#1f2937 !important; color:#fff !important; box-shadow:inset 0 0 0 1px rgba(255,255,255,.18), 0 1px 2px rgba(15,23,42,.14); }
+        body.studio-theme-dark .picker-sum-chip-empty,
+        html.studio-theme-dark body .picker-sum-chip-empty { background:#e2e8f0 !important; color:#0f172a !important; box-shadow:inset 0 0 0 1px rgba(15,23,42,.12), 0 1px 2px rgba(0,0,0,.28); }
+        .picker-foot { display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid var(--line); }
+        .ms-hint { display:none; margin-top:8px; color:var(--muted); font-size:11.5px; line-height:1.65; font-weight:600; }
+        body.show-ms .ms-hint { display:block; }
+        .ms-hint a { color:var(--text); font-weight:800; text-decoration:underline; text-underline-offset:3px; }
+        /* MS 平台不需要协议选择 */
+        body.show-ms #probeAsyncBtn,
+        body.show-ms .protocol-selector-wrap { display:none !important; }
+        .ms-hint .ms-line { display:block; }
+        .ms-hint .inline-code { display:inline-flex; align-items:center; min-height:20px; padding:0 7px; border-radius:6px; background:var(--panel); color:var(--text); border:1px solid var(--line); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; font-weight:700; vertical-align:middle; }
+        .empty { padding:18px; border:1px dashed var(--line); border-radius:11px; color:var(--faint); text-align:center; font-size:11.5px; font-weight:700; }
+        @media (max-width:860px) { .page{padding:24px 16px 60px}.layout{grid-template-columns:1fr;gap:28px}.sidebar{position:static}.form,.model-grid{grid-template-columns:1fr}.models-toolbar{align-items:flex-start;flex-direction:column}.models-toolbar-actions{width:100%;justify-content:flex-end}.lora-row{grid-template-columns:1fr}.lora-row .icon-btn{width:100%;} }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="wrap">
+            <header class="page-head">
+                <div>
+                    <div class="title" data-i18n="api.title">API 设置</div>
+                    <div class="sub" data-i18n="api.subtitle">管理平台地址、模型列表和 Key。Key 写入后端 env，页面不会回显完整内容。</div>
+                </div>
+                <div id="status" class="status"></div>
+            </header>
+
+            <div class="layout">
+                <aside class="sidebar">
+                    <div class="side-section-title" data-i18n="api.providersTitle">平台列表</div>
+                    <div id="providerList" class="provider-list"></div>
+                    <button class="add-btn" type="button" onclick="addProvider()"><i data-lucide="plus" class="w-4 h-4"></i><span data-i18n="api.addProvider">新增平台</span></button>
+                    <a class="api-link-btn" href="https://apimart.ai/register?aff=1uyAbb" target="_blank" rel="noopener noreferrer"><i data-lucide="key-round" class="w-4 h-4"></i><span data-i18n="api.getApi">获取API</span></a>
+                </aside>
+
+                <main class="content">
+                    <div class="content-head">
+                        <div>
+                            <div id="editorTitle" class="editor-title" data-i18n="api.provider">平台</div>
+                            <div class="editor-sub" data-i18n="api.editorSub">配置基础信息、API Key 和可用模型</div>
+                        </div>
+                        <div class="content-actions">
+                            <button id="deleteBtn" class="action-btn danger-btn api-page-delete-btn" type="button" onclick="deleteProvider()"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i><span data-i18n="api.delete">删除</span></button>
+                            <button class="action-btn save-btn api-page-save-btn" type="button" onclick="saveProviders()"><i data-lucide="save" class="w-3.5 h-3.5"></i><span data-i18n="api.save">保存</span></button>
+                        </div>
+                    </div>
+
+                    <section class="block">
+                        <div class="block-head">
+                            <div>
+                                <div class="block-title" data-i18n="api.basicInfo">基本信息</div>
+                                <div class="block-desc" data-i18n="api.basicHint">平台显示名、唯一 ID 和请求地址</div>
+                            </div>
+                        </div>
+                        <div class="form">
+                            <label class="field full">
+                                <span class="label" data-i18n="api.platformName">平台名称</span>
+                                <div class="field-frame"><input id="nameInput" type="text" placeholder="Comfly"></div>
+                                <span class="hint"><span data-i18n="api.platformIdShown">平台 ID</span>: <span id="idPreview" style="font-family:ui-monospace,Menlo,monospace;color:var(--text)">—</span></span>
+                                <input id="idInput" type="hidden">
+                            </label>
+                            <label class="field full">
+                                <span class="label" data-i18n="api.baseUrl">请求地址</span>
+                                <div class="field-frame"><input id="baseInput" type="text" placeholder="https://ai.comfly.chat"></div>
+                                <div class="ms-hint">
+                                    <span class="ms-line"><span data-i18n="api.msChinaEndpoint">国内默认请求地址：</span><span class="inline-code">https://api-inference.modelscope.cn/v1</span></span>
+                                    <span class="ms-line"><span data-i18n="api.msGlobalEndpoint">国外使用请求地址：</span><span class="inline-code">https://api-inference.modelscope.ai/v1</span></span>
+                                </div>
+                            </label>
+                            <label class="field full">
+                                <span class="label">API Key</span>
+                                <div class="key-row" style="margin:0">
+                                    <div class="field-frame" style="flex:1"><input id="keyInput" type="password"></div>
+                                    <button class="key-btn" type="button" onclick="saveKeyOnly()" title="保存 Key"><i data-lucide="check" class="w-4 h-4"></i></button>
+                                    <button class="key-btn key-clear" type="button" onclick="clearKeyOnly()" title="清除 Key"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                </div>
+                                <span id="keyHint" class="hint"></span>
+                                <div class="ms-hint">
+                                    <span class="ms-line"><span data-i18n="api.msTokenCn">获取 Token · 国内：</span><a href="https://www.modelscope.cn/my/access/token" target="_blank">https://www.modelscope.cn/my/access/token</a></span>
+                                    <span class="ms-line"><span data-i18n="api.msTokenGlobal">获取 Token · 国外：</span><a href="https://www.modelscope.ai/my/access/token" target="_blank">https://www.modelscope.ai/my/access/token</a></span>
+                                </div>
+                            </label>
+                            <!-- 验证操作行 -->
+                            <div class="verify-action-row">
+                                <button id="testUrlBtn" class="action-btn" type="button" onclick="testConnection()">
+                                    <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i><span data-i18n="api.testUrl">验证地址</span>
+                                </button>
+                                <button id="probeAsyncBtn" class="action-btn" type="button" onclick="probeAsync()">
+                                    <i data-lucide="radar" class="w-3.5 h-3.5"></i><span>验证协议</span>
+                                </button>
+                                <div class="field-frame protocol-selector-wrap" style="flex-shrink:0">
+                                    <select id="protocolInput" style="height:34px;padding:0 10px;border:0;background:transparent;color:var(--text);outline:none;font-size:13px;font-weight:650;white-space:nowrap">
+                                        <option value="openai" data-i18n="api.protocolOpenAI">OpenAI 兼容</option>
+                                        <option value="apimart" data-i18n="api.protocolApimart">APIMart 异步</option>
+                                        <option value="gemini" data-i18n="api.protocolGemini">Gemini 协议</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="verifyResult" style="display:none;padding:2px 0;grid-column:1/-1"></div>
+                        </div>
+                    </section>
+
+                    <div id="modelsHead" class="block models-toolbar">
+                        <div>
+                            <div class="block-title" data-i18n="api.modelsTitle">模型列表</div>
+                            <div class="block-desc" data-i18n="api.modelsDesc">从上游 API 自动拉取所有可用模型并按类型分类（image / chat / video）</div>
+                        </div>
+                        <div class="models-toolbar-actions">
+                            <button id="fetchModelsBtn" class="action-btn primary-btn" type="button" onclick="fetchModels()">
+                                <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i><span data-i18n="api.fetchModels">拉取模型</span>
+                            </button>
+                            <button id="openPickerBtn" class="action-btn" type="button" onclick="openModelPicker()" disabled style="opacity:.5">
+                                <i data-lucide="list-checks" class="w-3.5 h-3.5"></i><span data-i18n="api.selectModels">选择模型</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="model-grid">
+                        <section class="block">
+                            <div class="block-head">
+                                <div>
+                                    <div class="block-title" data-i18n="api.imageModels">生图模型</div>
+                                    <div class="block-desc" data-i18n="api.imageHint">在线生图和无限画布 API 生成使用</div>
+                                    <div class="ms-hint">
+                                        <span class="ms-line"><span data-i18n="api.msModelExample">模型名称示意：</span><span class="inline-code">Tongyi-MAI/Z-Image-Turbo</span></span>
+                                    </div>
+                                </div>
+                                <button class="ghost-btn" type="button" onclick="addModel('image')"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span data-i18n="api.model">模型</span></button>
+                            </div>
+                            <div id="imageModelList" class="model-list"></div>
+                        </section>
+
+                        <section class="block">
+                            <div class="block-head">
+                                <div>
+                                    <div class="block-title" data-i18n="api.chatModels">聊天模型</div>
+                                    <div class="block-desc" data-i18n="api.chatHint">GPT 对话和 LLM 节点使用</div>
+                                </div>
+                                <button class="ghost-btn" type="button" onclick="addModel('chat')"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span data-i18n="api.model">模型</span></button>
+                        </div>
+                        <div id="chatModelList" class="model-list"></div>
+                    </section>
+
+                        <section class="block">
+                            <div class="block-head">
+                                <div>
+                                    <div class="block-title" data-i18n="api.videoModels">视频模型</div>
+                                    <div class="block-desc" data-i18n="api.videoHint">无限画布视频生成节点使用</div>
+                                </div>
+                                <button class="ghost-btn" type="button" onclick="addModel('video')"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span data-i18n="api.model">模型</span></button>
+                            </div>
+                            <div id="videoModelList" class="model-list"></div>
+                        </section>
+
+                        <section id="msLoraBlock" class="block ms-lora-block">
+                            <div class="block-head">
+                                <div>
+                                    <div class="block-title" data-i18n="api.loraManager">LoRA 管理</div>
+                                    <div class="block-desc" data-i18n="api.loraManagerDesc">为 ModelScope 生图模型绑定可用 LoRA。无限画布 MS 节点会按当前模型自动筛选。</div>
+                                    <div class="ms-hint">
+                                        <span class="ms-line"><span data-i18n="api.msCnModels">中文模型库：</span><a href="https://www.modelscope.cn/aigc/models" target="_blank">https://www.modelscope.cn/aigc/models</a></span>
+                                        <span class="ms-line"><span data-i18n="api.msEnModels">英文模型库：</span><a href="https://www.modelscope.ai/civision/models" target="_blank">https://www.modelscope.ai/civision/models</a></span>
+                                    </div>
+                                </div>
+                                <button class="ghost-btn" type="button" onclick="addMsLora()"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span>LoRA</span></button>
+                            </div>
+                            <div id="msLoraList" class="lora-list"></div>
+                        </section>
+                </div>
+
+            </main>
+        </div>
+        </div>
+    </div>
+
+    <!-- 模型选择浮层 -->
+    <div id="modelPickerOverlay" class="picker-overlay">
+        <div class="picker-modal">
+            <div class="picker-head">
+                <div>
+                    <div class="picker-title">从上游拉取的模型清单</div>
+                    <div id="pickerCount" class="picker-count">—</div>
+                </div>
+                <div class="picker-close" onclick="closeModelPicker()"><i data-lucide="x" class="w-4 h-4"></i></div>
+            </div>
+            <div class="picker-toolbar">
+                <input id="pickerFilter" class="picker-search" type="text" placeholder="按名称搜索模型…" oninput="renderModelPicker()">
+                <div class="picker-cat-tabs">
+                    <button class="picker-cat-tab active" data-cat="all" onclick="selectPickerCat('all')">全部 <span class="cat-count">0</span></button>
+                    <button class="picker-cat-tab" data-cat="image" onclick="selectPickerCat('image')">生图 <span class="cat-count">0</span></button>
+                    <button class="picker-cat-tab" data-cat="chat" onclick="selectPickerCat('chat')">LLM <span class="cat-count">0</span></button>
+                    <button class="picker-cat-tab" data-cat="video" onclick="selectPickerCat('video')">视频 <span class="cat-count">0</span></button>
+                </div>
+            </div>
+            <div id="pickerList" class="picker-body"></div>
+            <div id="pickerSummary" class="picker-summary">
+                <span class="picker-summary-title">将应用：</span>
+                <span id="sumImage" class="picker-sum-chip picker-sum-chip-empty">生图 0</span>
+                <span id="sumChat" class="picker-sum-chip picker-sum-chip-empty">聊天 0</span>
+                <span id="sumVideo" class="picker-sum-chip picker-sum-chip-empty">视频 0</span>
+                <span id="sumUnsel" style="margin-left:auto;color:var(--faint)">未选 0</span>
+            </div>
+            <div class="picker-foot">
+                <button class="action-btn" type="button" onclick="closeModelPicker()">取消</button>
+                <button class="action-btn save-btn" type="button" onclick="applyModelPicker()">应用到模型列表</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let providers = [];
+        let selectedId = '';
+        const providerList = document.getElementById('providerList');
+        const editorTitle = document.getElementById('editorTitle');
+        const statusEl = document.getElementById('status');
+        const nameInput = document.getElementById('nameInput');
+        const idInput = document.getElementById('idInput');
+        const baseInput = document.getElementById('baseInput');
+        const protocolInput = document.getElementById('protocolInput');
+        const keyInput = document.getElementById('keyInput');
+        const keyHint = document.getElementById('keyHint');
+        const imageModelList = document.getElementById('imageModelList');
+        const chatModelList = document.getElementById('chatModelList');
+        const videoModelList = document.getElementById('videoModelList');
+        const msLoraBlock = document.getElementById('msLoraBlock');
+        const msLoraList = document.getElementById('msLoraList');
+        const MS_BUILTIN_IMAGE_MODELS = [
+            'Tongyi-MAI/Z-Image-Turbo',
+            'Qwen/Qwen-Image-2512',
+            'Qwen/Qwen-Image-Edit-2511',
+            'black-forest-labs/FLUX.2-klein-9B'
+        ];
+
+        function refreshIcons(){ if(window.lucide) lucide.createIcons(); }
+        function tr(key){ return window.StudioI18n ? window.StudioI18n.t(key) : key; }
+        function setStatus(text){ statusEl.textContent = text || ''; }
+        function normalizeId(value){
+            return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/^-+|-+$/g, '').replace(/-+/g, '-').slice(0, 40);
+        }
+        // 从平台名生成稳定的 ID；含中文等非 ASCII 会被去掉，剩下为空时自动追加随机后缀
+        function deriveIdFromName(name, existingId){
+            // 内置 / 已保存过的 ID 不变
+            if(existingId === 'comfly' || existingId === 'modelscope') return existingId;
+            let id = normalizeId(name);
+            if(!id){
+                // 全是 Unicode 字符，给个随机短串
+                id = 'api-' + Math.random().toString(36).slice(2, 8);
+            }
+            // 避免和其他 provider 冲突（除自己外）
+            let candidate = id, i = 2;
+            while(providers.some(p => p.id === candidate && p.id !== existingId)){
+                candidate = `${id}-${i++}`;
+            }
+            return candidate;
+        }
+        function updateIdPreview(){
+            const item = provider();
+            if(!item) return;
+            const isBuiltin = item.id === 'comfly' || item.id === 'modelscope';
+            const idPreview = document.getElementById('idPreview');
+            if(!idPreview) return;
+            if(isBuiltin){
+                idPreview.textContent = item.id;
+                return;
+            }
+            idPreview.textContent = deriveIdFromName(nameInput.value, item.id);
+        }
+        function provider(){
+            return providers.find(item => item.id === selectedId) || providers[0];
+        }
+        function unique(values){
+            const seen = new Set();
+            return values.map(v => String(v || '').trim()).filter(v => v && !seen.has(v) && seen.add(v));
+        }
+        function syncEditor(){
+            const item = provider();
+            if(!item) return;
+            const oldId = item.id;
+            const isBuiltin = item.id === 'comfly' || item.id === 'modelscope';
+            // 内置平台不允许改 ID；自定义平台的 ID 自动从名称派生
+            const nextId = isBuiltin ? item.id : deriveIdFromName(nameInput.value, item.id);
+            item.id = nextId;
+            if(oldId !== item.id) selectedId = item.id;
+            item.name = nameInput.value.trim() || item.id;
+            item.base_url = baseInput.value.trim();
+            // MS 固定使用 OpenAI 协议，不从下拉读取
+            item.protocol = (item.id === 'modelscope') ? 'openai' : (protocolInput?.value || 'openai');
+            const key = keyInput.value.trim();
+            if(key) item.api_key = key;
+        }
+        function sortedProviders(){
+            const order = ['modelscope', 'comfly'];
+            return [...providers].sort((a, b) => {
+                const ai = order.indexOf(a.id);
+                const bi = order.indexOf(b.id);
+                if(ai === -1 && bi === -1) return 0;
+                if(ai === -1) return 1;
+                if(bi === -1) return -1;
+                return ai - bi;
+            });
+        }
+        function renderProviderList(){
+            providerList.innerHTML = sortedProviders().map(item => {
+                const active = item.id === selectedId ? 'active' : '';
+                if(item.id === 'modelscope'){
+                    return `
+                        <button class="provider-card provider-card-banner ${active}" type="button" onclick="selectProvider('${escapeHtml(item.id)}')">
+                            <img src="/static/modelscope.gif" alt="ModelScope" class="ms-icon-light">
+                            <img src="/static/modelscope-1.gif" alt="ModelScope" class="ms-icon-dark">
+                        </button>
+                    `;
+                }
+                return `
+                    <button class="provider-card ${active}" type="button" onclick="selectProvider('${escapeHtml(item.id)}')">
+                        <span class="provider-mark"><i data-lucide="${item.has_key ? 'key-round' : 'key'}" class="w-4 h-4"></i></span>
+                        <span class="min-w-0">
+                            <div class="provider-name">${escapeHtml(item.name || item.id)}</div>
+                            <div class="provider-meta">${escapeHtml(item.base_url || '未配置地址')}</div>
+                        </span>
+                    </button>
+                `;
+            }).join('');
+            refreshIcons();
+        }
+        function renderEditor(){
+            const item = provider();
+            if(!item) return;
+            editorTitle.textContent = item.name || item.id;
+            nameInput.value = item.name || '';
+            idInput.value = item.id || '';
+            updateIdPreview();
+            clearVerifyResult();
+            baseInput.value = item.base_url || '';
+            if(protocolInput) protocolInput.value = item.protocol || 'openai';
+            keyInput.value = '';
+            keyInput.placeholder = item.has_key ? `${tr('api.keepCurrentKey')} ${item.key_preview || ''}` : tr('api.enterKey');
+            keyHint.textContent = item.has_key ? `${tr('api.keySaved')}${item.key_env || 'API/.env'}` : tr('api.noKey');
+            const isModelScope = item.id === 'modelscope';
+            document.body.classList.toggle('show-ms', isModelScope);
+            if(msLoraBlock) msLoraBlock.style.display = isModelScope ? 'flex' : 'none';
+            const deleteBtn = document.getElementById('deleteBtn');
+            if(deleteBtn) deleteBtn.style.display = (item.id === 'modelscope') ? 'none' : 'inline-flex';
+            renderModels('image');
+            renderModels('chat');
+            renderModels('video');
+            if(isModelScope) renderMsLoras();
+            else if(msLoraList) msLoraList.innerHTML = '';
+            renderProviderList();
+        }
+        function showVerifyResult(html){ const el = document.getElementById('verifyResult'); if(el){ el.style.display = 'block'; el.innerHTML = html; } }
+        function clearVerifyResult(){ const el = document.getElementById('verifyResult'); if(el){ el.style.display = 'none'; el.innerHTML = ''; } }
+
+        async function probeAsync(){
+            const item = provider();
+            if(!item) return;
+            const btn = document.getElementById('probeAsyncBtn');
+            const baseUrl = baseInput.value.trim();
+            if(!baseUrl){ alert('请先填写请求地址'); return; }
+            if(btn){ btn.disabled = true; btn.querySelector('span').textContent = '检测中...'; }
+            showVerifyResult(`<span style="color:var(--muted);font-size:11px;font-weight:700">正在检测协议类型...</span>`);
+            try {
+                const apiKey = keyInput.value.trim();
+                const data = await fetch('/api/providers/probe-async', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ base_url: baseUrl, api_key: apiKey, provider_id: item.id })
+                }).then(async r => {
+                    if(!r.ok) throw new Error((await r.json()).detail || '请求失败');
+                    return r.json();
+                });
+                const isAsync = data.ok === true;
+                // 自动设置协议下拉
+                if(protocolInput){
+                    protocolInput.value = isAsync ? 'apimart' : 'openai';
+                    // 触发 change 以便其他地方同步
+                    protocolInput.dispatchEvent(new Event('change'));
+                }
+                const rawJson = JSON.stringify(data.raw, null, 2);
+                const color = isAsync ? '#15803d' : data.ok === null ? '#b45309' : '#64748b';
+                const icon = isAsync ? '✓' : '⚠';
+                const proto = isAsync ? 'APIMart 异步' : 'OpenAI 兼容';
+                showVerifyResult(`
+                    <div style="font-size:11px;font-weight:800;color:${color}">${icon} ${escapeHtml(data.message)}</div>
+                    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:2px">协议已自动设置为：<strong style="color:var(--text)">${proto}</strong></div>
+                    <details style="margin-top:6px">
+                        <summary style="font-size:10.5px;color:var(--muted);cursor:pointer;font-weight:700;user-select:none">▸ 查看原始响应 (HTTP ${data.status_code})</summary>
+                        <pre style="margin-top:6px;padding:10px 12px;border-radius:10px;background:var(--soft);border:1px solid var(--line-2);font-size:10.5px;font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all;color:var(--text);max-height:200px;overflow:auto">${escapeHtml(rawJson)}</pre>
+                    </details>`);
+            } catch(e){
+                if(protocolInput){ protocolInput.value = 'openai'; protocolInput.dispatchEvent(new Event('change')); }
+                showVerifyResult(`<div style="font-size:11px;font-weight:800;color:#b45309">⚠ ${escapeHtml(e.message || String(e))}，协议已设为 OpenAI 兼容</div>`);
+            } finally {
+                if(btn){ btn.disabled = false; btn.querySelector('span').textContent = '验证协议'; refreshIcons(); }
+            }
+        }
+
+        async function testConnection(){
+            const item = provider();
+            if(!item) return;
+            const btn = document.getElementById('testUrlBtn');
+            const baseUrl = baseInput.value.trim();
+            if(!baseUrl){ alert('请先填写请求地址'); return; }
+            if(btn){ btn.disabled = true; btn.querySelector('span').textContent = tr('api.testingUrl') || '验证中...'; }
+            showVerifyResult(`<span style="color:var(--muted);font-size:11px;font-weight:700">验证中...</span>`);
+            try {
+                const apiKey = keyInput.value.trim();
+                const data = await fetch('/api/providers/test-connection', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ base_url: baseUrl, api_key: apiKey, provider_id: item.id })
+                }).then(async r => {
+                    if(!r.ok) throw new Error((await r.json()).detail || (tr('api.urlInvalid') || '验证失败'));
+                    return r.json();
+                });
+                if(data.ok){
+                    // 存入 picker 状态并启用「选择模型」按钮，但不自动弹出
+                    lastFetchedAll = data.all || [];
+                    lastFetchedSuggestion = {
+                        image: new Set(data.image_models || []),
+                        chat: new Set(data.chat_models || []),
+                        video: new Set(data.video_models || []),
+                    };
+                    const openBtn = document.getElementById('openPickerBtn');
+                    if(openBtn){ openBtn.disabled = false; openBtn.style.opacity = '1'; }
+                    showVerifyResult(`<span style="color:#15803d;font-size:11px;font-weight:800">✓ 地址验证通过 · 找到 ${data.model_count} 个模型</span>`);
+                } else {
+                    showVerifyResult(`
+                        <div style="font-size:11px;font-weight:800;color:#b45309">⚠ 地址验证未通过 (HTTP ${data.status})</div>
+                        <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:3px">${escapeHtml((data.message || '').slice(0,200))}</div>`);
+                }
+            } catch(e){
+                showVerifyResult(`<div style="font-size:11px;font-weight:800;color:#b45309">⚠ ${escapeHtml(e.message || String(e))}</div>`);
+            } finally {
+                if(btn){ btn.disabled = false; btn.querySelector('span').textContent = tr('api.testUrl') || '验证地址'; }
+            }
+        }
+        let lastFetchedAll = [];          // 全部模型 id 列表
+        let lastFetchedSuggestion = null; // 后端自动分类建议
+
+        async function fetchModels(){
+            const item = provider();
+            if(!item) return;
+            syncEditor();
+            const btn = document.getElementById('fetchModelsBtn');
+            const baseUrl = baseInput.value.trim();
+            const apiKey = keyInput.value.trim();
+            if(!baseUrl){ alert('请先填写请求地址'); return; }
+            if(btn){ btn.disabled = true; btn.querySelector('span').textContent = tr('api.fetchingModels') || '拉取中...'; }
+            setStatus(tr('api.fetchingModels') || '正在从上游拉取模型列表...');
+            try {
+                const data = await fetch('/api/providers/fetch-models', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({base_url:baseUrl, api_key:apiKey, provider_id:item.id})
+                }).then(async r => {
+                    if(!r.ok) throw new Error((await r.json()).detail || (tr('api.urlInvalid') || '拉取失败'));
+                    return r.json();
+                });
+                lastFetchedAll = data.all || [];
+                lastFetchedSuggestion = {
+                    image: new Set(data.image_models || []),
+                    chat: new Set(data.chat_models || []),
+                    video: new Set(data.video_models || []),
+                };
+                // 启用「选择模型」按钮，并 statusbar 显示已拉取数量
+                const openBtn = document.getElementById('openPickerBtn');
+                if(openBtn){ openBtn.disabled = false; openBtn.style.opacity = '1'; }
+                setStatus(`已拉取 ${data.total} 个模型 · 点「选择模型」勾选要导入的`);
+                openModelPicker();
+            } catch(e){
+                alert('拉取失败：' + (e.message || e));
+                setStatus('拉取失败');
+            } finally {
+                if(btn){ btn.disabled = false; btn.querySelector('span').textContent = tr('api.fetchModels') || '拉取模型'; }
+            }
+        }
+
+        // —— 模型选择器浮层 ——
+        // 每个模型只归一类（根据用户已配置 或 关键字猜测）；勾选 = 纳入该分类
+        let pickerState = { category: {}, selected: {} };
+        function openModelPicker(){
+            const item = provider();
+            if(!item || !lastFetchedAll.length){ alert('没有拉取到模型'); return; }
+            const existing = { image: new Set(item.image_models||[]), chat: new Set(item.chat_models||[]), video: new Set(item.video_models||[]) };
+            const allIds = new Set([...lastFetchedAll, ...(item.image_models||[]), ...(item.chat_models||[]), ...(item.video_models||[])]);
+            pickerState = { category: {}, selected: {} };
+            allIds.forEach(id => {
+                // 类别归属：用户已配置 > 关键字建议 > 默认 chat
+                let cat;
+                if(existing.image.has(id)) cat = 'image';
+                else if(existing.video.has(id)) cat = 'video';
+                else if(existing.chat.has(id)) cat = 'chat';
+                else if(lastFetchedSuggestion?.image?.has(id)) cat = 'image';
+                else if(lastFetchedSuggestion?.video?.has(id)) cat = 'video';
+                else cat = 'chat';
+                pickerState.category[id] = cat;
+                // 默认勾选状态：已在用户配置里的 = 勾选；新拉的 = 不勾选（让用户主动选）
+                pickerState.selected[id] = existing.image.has(id) || existing.chat.has(id) || existing.video.has(id);
+            });
+            // 默认 tab 切回「全部」
+            document.querySelectorAll('.picker-cat-tab').forEach(t => t.classList.toggle('active', t.dataset.cat === 'all'));
+            document.getElementById('modelPickerOverlay').style.display = 'flex';
+            renderModelPicker();
+        }
+        function closeModelPicker(){ document.getElementById('modelPickerOverlay').style.display = 'none'; }
+        function renderModelPicker(){
+            const filter = (document.getElementById('pickerFilter')?.value || '').toLowerCase();
+            const currentTab = document.querySelector('.picker-cat-tab.active')?.dataset.cat || 'all';
+            const ids = Object.keys(pickerState.category).sort();
+            // 各分类总数 / 已选数
+            const totals = { all: ids.length, image:0, chat:0, video:0 };
+            const selecteds = { all:0, image:0, chat:0, video:0 };
+            ids.forEach(id => {
+                const cat = pickerState.category[id];
+                totals[cat]++;
+                if(pickerState.selected[id]){ selecteds[cat]++; selecteds.all++; }
+            });
+            // 过滤显示
+            const list = ids.filter(id => {
+                if(filter && !id.toLowerCase().includes(filter)) return false;
+                if(currentTab === 'all') return true;
+                return pickerState.category[id] === currentTab;
+            });
+            document.getElementById('pickerCount').textContent = `共 ${totals.all} 个模型 · 当前显示 ${list.length} 个`;
+            document.querySelectorAll('.picker-cat-tab').forEach(tab => {
+                const cat = tab.dataset.cat;
+                tab.querySelector('.cat-count').textContent = `${selecteds[cat]}/${totals[cat]}`;
+            });
+            // 列表
+            const html = list.map(id => {
+                const checked = pickerState.selected[id];
+                return `
+                    <div class="picker-row ${checked?'has-sel':''}" onclick="togglePickerRow('${escapeAttr(id)}')">
+                        <div class="picker-checkbox ${checked?'checked':''}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </div>
+                        <div class="picker-model-name" title="${escapeAttr(id)}">${escapeHtml(id)}</div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('pickerList').innerHTML = html || `<div style="padding:32px;text-align:center;color:var(--faint);font-size:12px">无匹配</div>`;
+            // 底部汇总
+            const sumImage = document.getElementById('sumImage');
+            const sumChat = document.getElementById('sumChat');
+            const sumVideo = document.getElementById('sumVideo');
+            const sumUnsel = document.getElementById('sumUnsel');
+            if(sumImage){ sumImage.textContent = `生图 ${selecteds.image}`; sumImage.classList.toggle('picker-sum-chip-empty', selecteds.image === 0); }
+            if(sumChat){ sumChat.textContent = `LLM ${selecteds.chat}`; sumChat.classList.toggle('picker-sum-chip-empty', selecteds.chat === 0); }
+            if(sumVideo){ sumVideo.textContent = `视频 ${selecteds.video}`; sumVideo.classList.toggle('picker-sum-chip-empty', selecteds.video === 0); }
+            if(sumUnsel){ sumUnsel.textContent = `未选 ${totals.all - selecteds.all}`; }
+        }
+        function togglePickerRow(id){
+            pickerState.selected[id] = !pickerState.selected[id];
+            renderModelPicker();
+        }
+        function selectPickerCat(cat){
+            document.querySelectorAll('.picker-cat-tab').forEach(t => t.classList.toggle('active', t.dataset.cat === cat));
+            renderModelPicker();
+        }
+        function applyModelPicker(){
+            const item = provider(); if(!item) return;
+            const image = [], chat = [], video = [];
+            Object.entries(pickerState.selected).forEach(([id, sel]) => {
+                if(!sel) return;
+                const cat = pickerState.category[id];
+                if(cat === 'image') image.push(id);
+                else if(cat === 'video') video.push(id);
+                else chat.push(id);
+            });
+            item.image_models = image;
+            item.chat_models = chat;
+            item.video_models = video;
+            renderModels('image'); renderModels('chat'); renderModels('video');
+            renderMsLoras();
+            setStatus(`已应用 · 生图 ${image.length} / LLM ${chat.length} / 视频 ${video.length}，点保存生效`);
+            closeModelPicker();
+        }
+        async function saveKeyOnly(){
+            const item = provider();
+            if(!item) return;
+            const key = keyInput.value.trim();
+            if(!key){ alert(tr('api.enterKeyAlert') || '请输入 Key'); return; }
+            item.api_key = key;
+            await saveProviders();
+            keyInput.value = '';
+        }
+        async function clearKeyOnly(){
+            const item = provider();
+            if(!item) return;
+            if(!item.has_key && !keyInput.value){ return; }
+            if(!confirm(tr('api.confirmClearKey') || '确认清除当前 Key？')) return;
+            item._clearKey = true;
+            await saveProviders();
+            keyInput.value = '';
+        }
+        function renderModels(kind){
+            const item = provider();
+            const key = kind === 'image' ? 'image_models' : kind === 'video' ? 'video_models' : 'chat_models';
+            const list = kind === 'image' ? imageModelList : kind === 'video' ? videoModelList : chatModelList;
+            const models = item?.[key] || [];
+            if(!models.length){
+                list.innerHTML = `<div class="empty">${tr('api.noModels')}</div>`;
+                return;
+            }
+            list.innerHTML = models.map((model, index) => `
+                <div class="model-row">
+                    <input value="${escapeAttr(model)}" oninput="updateModel('${kind}', ${index}, this.value)">
+                    <button class="icon-btn" type="button" onclick="removeModel('${kind}', ${index})" title="删除"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+            `).join('');
+            refreshIcons();
+        }
+        function msLoraTargetOptions(selected){
+            const item = provider();
+            const models = unique([selected, ...MS_BUILTIN_IMAGE_MODELS, ...((item?.image_models) || [])]);
+            return models.filter(Boolean).map(model => `<option value="${escapeAttr(model)}" ${model === selected ? 'selected' : ''}>${escapeHtml(model)}</option>`).join('');
+        }
+        function normalizeLoraStrength(value){
+            const n = Number(value);
+            if(!Number.isFinite(n)) return 0.8;
+            return Math.max(0, Math.min(2, n));
+        }
+        function renderMsLoras(){
+            const item = provider();
+            if(!msLoraList || !item || item.id !== 'modelscope') return;
+            item.ms_loras = Array.isArray(item.ms_loras) ? item.ms_loras : [];
+            if(!item.ms_loras.length){
+                msLoraList.innerHTML = `<div class="lora-empty">${tr('api.loraEmpty')}</div>`;
+                return;
+            }
+            msLoraList.innerHTML = item.ms_loras.map((lora, index) => {
+                const target = lora.target_model || lora.model || MS_BUILTIN_IMAGE_MODELS[0];
+                const strength = normalizeLoraStrength(lora.strength ?? lora.default_strength ?? 0.8);
+                return `
+                    <div class="lora-row">
+                        <label class="lora-field">
+                            <span>${tr('api.loraId')}</span>
+                            <input value="${escapeAttr(lora.id || '')}" placeholder="${escapeAttr(tr('api.loraIdPlaceholder'))}" oninput="updateMsLora(${index}, 'id', this.value)">
+                        </label>
+                        <label class="lora-field">
+                            <span>${tr('api.loraTargetModel')}</span>
+                            <select onchange="updateMsLora(${index}, 'target_model', this.value)">${msLoraTargetOptions(target)}</select>
+                        </label>
+                        <label class="lora-field">
+                            <span>${tr('api.loraDefaultStrength')}</span>
+                            <input type="number" min="0" max="2" step="0.05" value="${strength}" oninput="updateMsLora(${index}, 'strength', this.value)">
+                        </label>
+                        <button class="icon-btn" type="button" onclick="removeMsLora(${index})" title="${escapeAttr(tr('common.delete'))}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                `;
+            }).join('');
+            refreshIcons();
+        }
+        function addMsLora(){
+            const item = provider();
+            if(!item || item.id !== 'modelscope') return;
+            item.ms_loras = Array.isArray(item.ms_loras) ? item.ms_loras : [];
+            item.ms_loras.push({
+                id:'',
+                name:'',
+                target_model: (item.image_models || [])[0] || MS_BUILTIN_IMAGE_MODELS[0],
+                strength:0.8,
+                enabled:true,
+                note:''
+            });
+            renderMsLoras();
+        }
+        function updateMsLora(index, field, value){
+            const item = provider();
+            if(!item || item.id !== 'modelscope') return;
+            item.ms_loras = Array.isArray(item.ms_loras) ? item.ms_loras : [];
+            const lora = item.ms_loras[index];
+            if(!lora) return;
+            if(field === 'strength') lora.strength = normalizeLoraStrength(value);
+            else lora[field] = value;
+        }
+        function removeMsLora(index){
+            const item = provider();
+            if(!item || item.id !== 'modelscope') return;
+            item.ms_loras = Array.isArray(item.ms_loras) ? item.ms_loras : [];
+            item.ms_loras.splice(index, 1);
+            renderMsLoras();
+        }
+        function selectProvider(id){
+            syncEditor();
+            selectedId = id;
+            renderEditor();
+        }
+        function addProvider(){
+            syncEditor();
+            let id = 'custom-api';
+            let index = 2;
+            while(providers.some(item => item.id === id)) id = `custom-api-${index++}`;
+            providers.push({id, name:tr('api.newProvider'), base_url:'https://', protocol:'openai', enabled:true, primary:false, image_models:[], chat_models:[], video_models:[], has_key:false, key_preview:''});
+            selectedId = id;
+            renderEditor();
+        }
+        function deleteProvider(){
+            const item = provider();
+            if(!item) return;
+            if(item.id === 'modelscope'){ alert(tr('api.modelscopeOnlyDelete') || 'ModelScope 是默认平台，不可删除'); return; }
+            if(providers.length <= 1){ alert(tr('api.keepOne')); return; }
+            providers = providers.filter(p => p.id !== item.id);
+            selectedId = providers[0]?.id || '';
+            renderEditor();
+            saveProviders();
+        }
+        function addModel(kind){
+            const item = provider();
+            const key = kind === 'image' ? 'image_models' : kind === 'video' ? 'video_models' : 'chat_models';
+            item[key] = [...(item[key] || []), ''];
+            renderModels(kind);
+            if(kind === 'image') renderMsLoras();
+        }
+        function updateModel(kind, index, value){
+            const item = provider();
+            const key = kind === 'image' ? 'image_models' : kind === 'video' ? 'video_models' : 'chat_models';
+            item[key][index] = value;
+            if(kind === 'image') renderMsLoras();
+        }
+        function removeModel(kind, index){
+            const item = provider();
+            const key = kind === 'image' ? 'image_models' : kind === 'video' ? 'video_models' : 'chat_models';
+            item[key].splice(index, 1);
+            renderModels(kind);
+            if(kind === 'image') renderMsLoras();
+        }
+        async function loadProviders(){
+            setStatus(tr('api.loading'));
+            try {
+                const data = await fetch('/api/providers').then(r => r.json());
+                providers = data.providers || [];
+                selectedId = sortedProviders()[0]?.id || '';
+                renderEditor();
+                setStatus('');
+            } catch(err) {
+                setStatus(tr('api.loadFailed'));
+            }
+        }
+        async function saveProviders(){
+            syncEditor();
+            providers.forEach(item => {
+                item.id = normalizeId(item.id);
+                item.protocol = ['openai', 'apimart'].includes(String(item.protocol || '').toLowerCase()) ? String(item.protocol).toLowerCase() : 'openai';
+                item.image_models = unique(item.image_models || []);
+                item.chat_models = unique(item.chat_models || []);
+                item.video_models = unique(item.video_models || []);
+                item.ms_loras = (Array.isArray(item.ms_loras) ? item.ms_loras : []).map(lora => ({
+                    id:String(lora.id || '').trim(),
+                    name:String(lora.name || lora.id || '').trim(),
+                    target_model:String(lora.target_model || '').trim(),
+                    strength:normalizeLoraStrength(lora.strength ?? 0.8),
+                    enabled:lora.enabled !== false,
+                    note:String(lora.note || '').trim()
+                })).filter(lora => lora.id && lora.target_model);
+            });
+            if(new Set(providers.map(item => item.id)).size !== providers.length){
+                alert(tr('api.duplicateId'));
+                return;
+            }
+            setStatus(tr('api.saving'));
+            try {
+                const res = await fetch('/api/providers', {
+                    method:'PUT',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify(providers.map(item => ({
+                        id:item.id,
+                        name:item.name,
+                        base_url:item.base_url,
+                        protocol:(item.id === 'modelscope') ? 'openai' : (item.protocol || 'openai'),
+                        enabled:item.enabled !== false,
+                        primary:false,
+                        image_models:item.image_models || [],
+                        chat_models:item.chat_models || [],
+                        video_models:item.video_models || [],
+                        ms_loras:item.id === 'modelscope' ? (item.ms_loras || []) : [],
+                        ms_defaults_version:item.id === 'modelscope' ? (item.ms_defaults_version || 1) : 0,
+                        api_key:item._clearKey ? '' : (item.api_key || undefined)
+                    })))
+                });
+                if(!res.ok) throw new Error((await res.json()).detail || tr('api.saveFailed'));
+                const data = await res.json();
+                providers = data.providers || providers;
+                selectedId = provider()?.id || providers[0]?.id || '';
+                renderEditor();
+                setStatus(tr('api.saved'));
+                // 广播变更，画布等其他 iframe 立即重新拉取最新平台/模型列表
+                try { new BroadcastChannel('studio-api').postMessage({ type:'providers-changed' }); } catch(e) {}
+            } catch(err) {
+                setStatus(err.message || tr('api.saveFailed'));
+            }
+        }
+        function escapeHtml(str){
+            return String(str || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+        }
+        function escapeAttr(str){ return escapeHtml(str).replace(/`/g, '&#96;'); }
+        window.addEventListener('message', event => {
+            if(event.data?.type === 'studio-theme' && window.StudioTheme) window.StudioTheme.set(event.data.theme);
+            if(event.data?.type === 'studio-lang' && window.StudioI18n) {
+                window.StudioI18n.set(event.data.lang);
+                renderEditor();
+            }
+        });
+        window.addEventListener('studio-lang-change', () => {
+            renderEditor();
+        });
+        window.onload = () => {
+            if(window.StudioTheme) window.StudioTheme.apply();
+            if(window.StudioI18n) window.StudioI18n.apply();
+            loadProviders();
+            // 平台名输入时实时预览生成的 ID
+            if(nameInput) nameInput.addEventListener('input', updateIdPreview);
+        };
+    </script>
+</body>
+</html>

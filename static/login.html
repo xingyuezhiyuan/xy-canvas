@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>登录 - XY AI</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #060d1a; 
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+        canvas { display: block; }
+        
+        #promptText {
+            position: absolute;
+            top: 52px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            font-size: 26px;
+            font-weight: 600;
+            letter-spacing: 8px;
+            pointer-events: none;
+            transition: opacity 0.6s ease;
+            animation: textFlicker 3s forwards;
+        }
+        #promptText .line {
+            display: block;
+            text-align: center;
+        }
+        #promptText .line-sub {
+            display: block;
+            text-align: center;
+            font-size: 13px;
+            letter-spacing: 10px;
+            margin-top: 6px;
+            font-weight: 400;
+        }
+        #promptText .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 22px;
+            background: currentColor;
+            margin-left: 4px;
+            animation: cursorBlink 1s step-end infinite;
+            vertical-align: middle;
+        }
+        #promptText.hidden {
+            opacity: 0;
+        }
+        @keyframes cursorBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        @keyframes textFlicker {
+            0% { color: rgba(0, 200, 240, 0.35); text-shadow: 0 0 20px rgba(0, 200, 240, 0.3), 0 0 60px rgba(0, 200, 240, 0.1); }
+            4% { color: rgba(255, 200, 50, 0.9); text-shadow: 0 0 30px rgba(255, 200, 50, 0.8), 0 0 80px rgba(255, 200, 50, 0.4), 0 0 120px rgba(255, 150, 0, 0.2); }
+            6% { color: rgba(0, 200, 240, 0.35); text-shadow: 0 0 20px rgba(0, 200, 240, 0.3), 0 0 60px rgba(0, 200, 240, 0.1); }
+            9% { color: rgba(255, 200, 50, 0.9); text-shadow: 0 0 30px rgba(255, 200, 50, 0.8), 0 0 80px rgba(255, 200, 50, 0.4), 0 0 120px rgba(255, 150, 0, 0.2); }
+            100% { color: rgba(255, 200, 50, 0.9); text-shadow: 0 0 30px rgba(255, 200, 50, 0.8), 0 0 80px rgba(255, 200, 50, 0.4), 0 0 120px rgba(255, 150, 0, 0.2); }
+        }
+        #promptText .scanline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(0, 220, 255, 0.15), transparent);
+            animation: scanMove 4s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes scanMove {
+            0% { top: 0; opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        #loginForm {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -40%);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 10;
+            width: 310px;
+            padding: 40px;
+            background: rgba(0, 30, 50, 0.45);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 28px;
+            border: 1px solid rgba(0, 200, 240, 0.12);
+            box-shadow: 0 0 20px rgba(0, 200, 240, 0.15), 0 0 50px rgba(0, 200, 240, 0.1), 0 0 100px rgba(0, 200, 240, 0.05);
+        }
+        
+        #loginForm.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%);
+            outline: 2px solid rgba(0, 220, 255, 0.5);
+            outline-offset: 2px;
+            box-shadow: 0 0 20px rgba(0, 200, 240, 0.15), 0 0 50px rgba(0, 200, 240, 0.1), 0 0 100px rgba(0, 200, 240, 0.05), 0 0 30px rgba(0, 220, 255, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+        }
+        .form-group label {
+            display: block;
+            color: rgba(0, 200, 240, 0.4);
+            font-size: 10px;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px 0;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(0, 200, 240, 0.15);
+            color: #b0e8ff;
+            font-size: 14px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .form-group input::placeholder {
+            color: rgba(0, 200, 240, 0.15);
+        }
+        .form-group .input-line {
+            display: block;
+            height: 1px;
+            background: #00c8f0;
+            width: 0;
+            transition: width 0.5s ease;
+        }
+        .form-group input:focus + .input-line {
+            width: 100%;
+        }
+
+        #loginError {
+            color: #ff5c6c;
+            font-size: 12px;
+            margin-bottom: 16px;
+            display: none;
+            text-align: center;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .btn-row .btn-action {
+            flex: 1;
+            height: 44px;
+            border: 1px solid rgba(0, 200, 240, 0.2);
+            border-radius: 50px;
+            background: transparent;
+            color: rgba(0, 200, 240, 0.6);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-action:hover {
+            border: none;
+            background: linear-gradient(135deg, #00c8f0, #0891b2);
+            color: #fff;
+            font-weight: 800;
+            letter-spacing: 4px;
+            box-shadow: 0 0 20px rgba(0, 200, 240, 0.25);
+        }
+        .btn-row .btn-action:active {
+            transform: scale(0.96);
+        }
+
+        .timestamp {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            color: rgba(0, 200, 240, 0.15);
+            font-size: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+<div class="timestamp" id="timer"></div>
+<canvas id="sandCanvas"></canvas>
+
+<div id="promptText">
+    <span class="scanline"></span>
+    <span class="line">鼠标移至中心<span class="cursor"></span></span>
+    <span class="line-sub">注 册 登 录</span>
+</div>
+
+<div id="loginForm">
+    <div style="position:absolute;left:-9999px;top:-9999px;height:0;opacity:0;overflow:hidden;pointer-events:none;" aria-hidden="true">
+        <input type="text" name="fakeusername" tabindex="-1" autocomplete="off">
+        <input type="password" name="fakepassword" tabindex="-1" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+        <label>用户名</label>
+        <input id="username" type="text" placeholder="输入用户名" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
+        <span class="input-line"></span>
+    </div>
+    <div class="form-group">
+        <label>密码</label>
+        <input id="password" type="password" placeholder="输入密码" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
+        <span class="input-line"></span>
+    </div>
+    <div id="loginError"></div>
+    <div class="btn-row">
+        <button class="btn-action" id="loginBtn">登录</button>
+        <button class="btn-action" id="registerBtn">注册</button>
+    </div>
+</div>
+
+<script>
+var canvas = document.getElementById('sandCanvas');
+var ctx = canvas.getContext('2d');
+var loginForm = document.getElementById('loginForm');
+var timerEl = document.getElementById('timer');
+var promptText = document.getElementById('promptText');
+var loginBtn = document.getElementById('loginBtn');
+var registerBtn = document.getElementById('registerBtn');
+var loginError = document.getElementById('loginError');
+var usernameInput = document.getElementById('username');
+var passwordInput = document.getElementById('password');
+
+var width, height;
+var innerParticles = [], outerParticles = [], rays = [];
+var innerCount = 1500, outerCount = 4000;
+var mouseThreshold = 220;
+var isHovering = false;
+var noiseTimer = 0, prevBreath = 0, radarAngle = 0;
+var stars = [], STAR_COUNT = 2500, focalLength = 350;
+var starSpeed = 2, targetSpeed = 2;
+var mouseX = 0, mouseY = 0;
+var scrollSpeedFactor = 1;
+
+function updateTimer() {
+    var now = new Date();
+    timerEl.innerText = now.toLocaleString('en-GB').toUpperCase();
+}
+setInterval(updateTimer, 1000);
+
+window.addEventListener('resize', init);
+window.addEventListener('mousemove', function(e) {
+    var dx = e.clientX - width / 2;
+    var dy = e.clientY - height / 2;
+    isHovering = Math.sqrt(dx*dx + dy*dy) < mouseThreshold;
+    mouseX = (e.clientX / width - 0.5) * 2;
+    mouseY = (e.clientY / height - 0.5) * 2;
+});
+
+function isInsideRoundedSquare(px, py, cx, cy, halfSide, radius) {
+    var dx = Math.abs(px - cx);
+    var dy = Math.abs(py - cy);
+    if (dx > halfSide || dy > halfSide) return false;
+    if (dx > halfSide - radius && dy > halfSide - radius) {
+        var ox = dx - (halfSide - radius);
+        var oy = dy - (halfSide - radius);
+        return (ox * ox + oy * oy <= radius * radius);
+    }
+    return true;
+}
+
+function Particle(cfg) {
+    this.cfg = cfg;
+    this.init();
+}
+Particle.prototype.init = function() {
+    var cfg = this.cfg;
+    var angle = Math.random() * Math.PI * 2;
+    var r = cfg.initR[0] + Math.random() * cfg.initR[1];
+    this.x = width / 2 + Math.cos(angle) * r;
+    this.y = height / 2 + Math.sin(angle) * r;
+    this.vx = Math.cos(angle + (Math.random() - 0.5) * 0.5) * cfg.speed;
+    this.vy = Math.sin(angle + (Math.random() - 0.5) * 0.5) * cfg.speed;
+    this.size = cfg.size[0] + Math.random() * cfg.size[1];
+    this.alpha = cfg.alpha[0] + Math.random() * cfg.alpha[1];
+    this.isEscaping = false;
+};
+Particle.prototype.update = function(breath) {
+    var cx = width / 2, cy = height / 2;
+    var dx = this.x - cx;
+    var dy = this.y - cy;
+    var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    var cfg = this.cfg;
+    if (isHovering) {
+        this.vx += (Math.random() - 0.5) * 4;
+        this.vy += (Math.random() - 0.5) * 4;
+    } else {
+        if (dist < cfg.repulsionR) {
+            var force = (cfg.repulsionR - dist) / cfg.repulsionR;
+            this.vx += (dx / dist) * force * 6;
+            this.vy += (dy / dist) * force * 6;
+        }
+        var pushBase = Math.pow(breath, 5) * 14;
+        var randomScatter = (Math.random() - 0.5) * pushBase * 0.5;
+        this.vx += (dx / dist) * pushBase + randomScatter;
+        this.vy += (dy / dist) * pushBase + randomScatter;
+        if (breath > 0.88 && Math.random() > 0.97) {
+            this.isEscaping = true;
+        }
+        if (!this.isEscaping) {
+            if (!isInsideRoundedSquare(this.x + this.vx, this.y + this.vy, cx, cy, cfg.side, cfg.cornerR)) {
+                this.vx *= -0.4;
+                this.vy *= -0.4;
+                this.vx += (Math.random() - 0.5) * 2;
+                this.vy += (Math.random() - 0.5) * 2;
+            }
+            var pull = (cfg.targetR - dist) * 0.012;
+            this.vx += (dx / dist) * pull;
+            this.vy += (dy / dist) * pull;
+        }
+    }
+    this.x += this.vx;
+    this.y += this.vy;
+    var friction = this.isEscaping ? 0.98 : 0.86;
+    this.vx *= friction;
+    this.vy *= friction;
+    if (dist > width * 0.6 || (this.isEscaping && Math.abs(this.vx) < 0.05)) {
+        this.init();
+    }
+};
+Particle.prototype.draw = function(breath) {
+    var finalAlpha = this.isEscaping ? this.alpha * 0.4 : this.alpha;
+    ctx.fillStyle = 'rgba(0, ' + Math.round(140 + breath * 60) + ', ' + Math.round(180 + breath * 70) + ', ' + finalAlpha + ')';
+    ctx.fillRect(this.x, this.y, this.size, this.size);
+};
+
+function Ray(ringR) {
+    var angle = Math.random() * Math.PI * 2;
+    this.x = width / 2 + Math.cos(angle) * (ringR - 6 + Math.random() * 12);
+    this.y = height / 2 + Math.sin(angle) * (ringR - 6 + Math.random() * 12);
+    this.vx = Math.cos(angle + (Math.random() - 0.5) * 0.15) * (2 + Math.random() * 4);
+    this.vy = Math.sin(angle + (Math.random() - 0.5) * 0.15) * (2 + Math.random() * 4);
+    this.size = 0.8 + Math.random() * 1.8;
+    this.alpha = 0.3 + Math.random() * 0.4;
+    this.life = 1;
+    this.decay = 0.008 + Math.random() * 0.01;
+    this.length = 8 + Math.random() * 12;
+}
+Ray.prototype.update = function() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life -= this.decay;
+};
+Ray.prototype.draw = function() {
+    if (this.life <= 0) return;
+    var alpha = this.alpha * this.life;
+    var headX = this.x, headY = this.y;
+    var len = Math.sqrt(this.vx * this.vx + this.vy * this.vy) || 1;
+    var tailX = this.x - (this.vx / len) * this.length;
+    var tailY = this.y - (this.vy / len) * this.length;
+    ctx.save();
+    var grad = ctx.createLinearGradient(headX, headY, tailX, tailY);
+    grad.addColorStop(0, 'rgba(100, 230, 255, ' + alpha + ')');
+    grad.addColorStop(0.4, 'rgba(0, 210, 245, ' + alpha * 0.5 + ')');
+    grad.addColorStop(1, 'rgba(0, 200, 240, 0)');
+    ctx.beginPath();
+    ctx.moveTo(headX, headY);
+    ctx.lineTo(tailX, tailY);
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = this.size;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+};
+
+function Star3D() {
+    var range = 2000;
+    this.x = (Math.random() - 0.5) * range;
+    this.y = (Math.random() - 0.5) * range;
+    this.z = Math.random() * range;
+    this.size = 0.4 + Math.random() * 1.8;
+    this.brightness = 0.4 + Math.random() * 0.6;
+    this.alpha = this.brightness;
+    this.px = 0;
+    this.py = 0;
+}
+Star3D.prototype.update = function(speed) {
+    this.z -= speed;
+    if (this.z < -focalLength) {
+        var range = 2000;
+        this.z = range * 0.9 + Math.random() * range * 0.1;
+        this.x = (Math.random() - 0.5) * range;
+        this.y = (Math.random() - 0.5) * range;
+        this.size = 0.4 + Math.random() * 1.8;
+        this.brightness = 0.4 + Math.random() * 0.6;
+    }
+    var depthFactor = this.z / 2000;
+    var offsetX = mouseX * depthFactor * 400;
+    var offsetY = mouseY * depthFactor * 400;
+    var viewX = this.x + offsetX;
+    var viewY = this.y + offsetY;
+    var scale = focalLength / (focalLength + this.z);
+    this.sx = viewX * scale + width / 2;
+    this.sy = viewY * scale + height / 2;
+    this.psize = Math.max(0.3, this.size * scale);
+    this.alpha = this.brightness * Math.min(1, Math.max(0, 1 - depthFactor * 0.7));
+};
+Star3D.prototype.draw = function(ctx, speed) {
+    if (this.alpha < 0.01 || this.sx < -50 || this.sx > width + 50 || this.sy < -50 || this.sy > height + 50) return;
+    var trailLen = Math.max(0, (speed - 3) * 1.5);
+    if (trailLen > 0.5 && this.px && this.py) {
+        var dx = this.sx - this.px;
+        var dy = this.sy - this.py;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 1 && dist < 200) {
+            ctx.beginPath();
+            ctx.moveTo(this.px, this.py);
+            ctx.lineTo(this.sx, this.sy);
+            ctx.strokeStyle = 'rgba(0, 220, 255, ' + (this.alpha * 0.25 * Math.min(1, trailLen / 5)) + ')';
+            ctx.lineWidth = this.psize * 0.6;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+    }
+    this.px = this.sx;
+    this.py = this.sy;
+    var r = Math.round(60 + this.brightness * 50);
+    var g = Math.round(190 + this.brightness * 50);
+    var b = Math.round(220 + this.brightness * 35);
+    if (this.psize > 1.8) {
+        ctx.beginPath();
+        ctx.arc(this.sx, this.sy, this.psize * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(' + r + ', ' + g + ', ' + b + ', ' + (this.alpha * 0.15) + ')';
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = 'rgba(' + r + ', ' + g + ', ' + b + ', 0.4)';
+        ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(this.sx, this.sy, this.psize * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(' + r + ', ' + g + ', ' + b + ', ' + this.alpha + ')';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+};
+
+window.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    var delta = e.deltaY > 0 ? -0.3 : 0.3;
+    scrollSpeedFactor = Math.max(0.2, Math.min(3, scrollSpeedFactor + delta));
+}, { passive: false });
+
+function init() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    innerParticles = [];
+    outerParticles = [];
+    rays = [];
+    stars = [];
+    for (var i = 0; i < STAR_COUNT; i++) {
+        stars.push(new Star3D());
+    }
+    for (var i = 0; i < innerCount; i++) {
+        innerParticles.push(new Particle({
+            initR: [2, 8],
+            speed: 1.2,
+            size: [0.3, 1.0],
+            alpha: [0.2, 0.4],
+            side: 130,
+            cornerR: 52,
+            targetR: 95,
+            repulsionR: 30
+        }));
+    }
+    for (var i = 0; i < outerCount; i++) {
+        outerParticles.push(new Particle({
+            initR: [5, 16],
+            speed: 2.0,
+            size: [0.6, 2.2],
+            alpha: [0.08, 0.25],
+            side: 200,
+            cornerR: 75,
+            targetR: 140,
+            repulsionR: 40
+        }));
+    }
+}
+
+function drawCore(breath) {
+    if (isHovering) return;
+    var size = 18 + breath * 8;
+    var cx = width / 2, cy = height / 2;
+    ctx.save();
+    ctx.shadowBlur = 50 * breath;
+    ctx.shadowColor = 'rgba(0, 200, 240, 0.7)';
+    ctx.fillStyle = 'rgba(0, 200, 240, 0.35)';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - size);
+    ctx.lineTo(cx + size * 0.7, cy);
+    ctx.lineTo(cx, cy + size);
+    ctx.lineTo(cx - size * 0.7, cy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+}
+
+var radarRingR = 195;
+function drawRadar() {
+    if (isHovering) return;
+    var cx = width / 2, cy = height / 2;
+    var r = radarRingR;
+    var beamAngle = 0.25;
+    ctx.save();
+
+    var grad = ctx.createRadialGradient(cx, cy, r * 0.5, cx, cy, r);
+    grad.addColorStop(0, 'rgba(0, 200, 240, 0)');
+    grad.addColorStop(0.7, 'rgba(0, 200, 240, 0)');
+    grad.addColorStop(0.85, 'rgba(0, 210, 245, 0.02)');
+    grad.addColorStop(0.95, 'rgba(0, 220, 255, 0.06)');
+    grad.addColorStop(1, 'rgba(0, 220, 255, 0.12)');
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, radarAngle - beamAngle, radarAngle);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    var lineLen = r * 1.1;
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = 'rgba(0, 230, 255, 0.8)';
+    ctx.strokeStyle = 'rgba(100, 240, 255, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(radarAngle) * r * 0.6, cy + Math.sin(radarAngle) * r * 0.6);
+    ctx.lineTo(cx + Math.cos(radarAngle) * lineLen, cy + Math.sin(radarAngle) * lineLen);
+    ctx.stroke();
+
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = 'rgba(0, 220, 255, 0.5)';
+    ctx.strokeStyle = 'rgba(0, 220, 255, 0.15)';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([6, 8]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.restore();
+
+    radarAngle += 0.012;
+    if (radarAngle > Math.PI * 2) radarAngle -= Math.PI * 2;
+}
+
+function showError(msg) {
+    loginError.textContent = msg;
+    loginError.style.display = 'block';
+}
+
+function hideError() {
+    loginError.style.display = 'none';
+}
+
+async function doLogin() {
+    var username = usernameInput.value.trim();
+    var password = passwordInput.value;
+    if (!username || !password) {
+        showError('请输入用户名和密码');
+        return;
+    }
+    hideError();
+    try {
+        var resp = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username, password: password })
+        });
+        if (!resp.ok) {
+            var err = await resp.json();
+            showError(err.detail || '登录失败');
+            return;
+        }
+        var data = await resp.json();
+        localStorage.setItem('xy_auth_token', data.token);
+        localStorage.setItem('xy_auth_user', JSON.stringify({ username: data.username, is_admin: data.is_admin }));
+        window.location.href = '/static/index.html';
+    } catch (e) {
+        showError('网络错误，请稍后重试');
+    }
+}
+
+async function doRegister() {
+    var username = usernameInput.value.trim();
+    var password = passwordInput.value;
+    if (!username || !password) {
+        showError('请输入用户名和密码');
+        return;
+    }
+    hideError();
+    try {
+        var resp = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username, password: password })
+        });
+        if (!resp.ok) {
+            var err = await resp.json();
+            showError(err.detail || '注册失败');
+            return;
+        }
+        var data = await resp.json();
+        localStorage.setItem('xy_auth_token', data.token);
+        localStorage.setItem('xy_auth_user', JSON.stringify({ username: data.username, is_admin: data.is_admin }));
+        window.location.href = '/static/index.html';
+    } catch (e) {
+        showError('网络错误，请稍后重试');
+    }
+}
+
+loginBtn.onclick = doLogin;
+registerBtn.onclick = doRegister;
+
+usernameInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+passwordInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+
+function animate() {
+    starSpeed += (targetSpeed * scrollSpeedFactor - starSpeed) * 0.05;
+    ctx.fillStyle = 'rgba(6, 13, 26, ' + (0.25 - Math.min(1, starSpeed / 8) * 0.15) + ')';
+    ctx.fillRect(0, 0, width, height);
+
+    var i;
+    for (i = 0; i < stars.length; i++) {
+        stars[i].update(starSpeed);
+        stars[i].draw(ctx, starSpeed);
+    }
+
+    noiseTimer += 0.04;
+    var breath = Math.pow((Math.sin(noiseTimer) + 1) / 2, 2);
+
+    if (breath > 0.92 && prevBreath <= breath && Math.random() > 0.3) {
+        for (var k = 0; k < 20; k++) {
+            rays.push(new Ray(140));
+        }
+    }
+    prevBreath = breath;
+
+    if (isHovering) {
+        loginForm.classList.add('visible');
+        promptText.classList.add('hidden');
+    } else {
+        loginForm.classList.remove('visible');
+        promptText.classList.remove('hidden');
+    }
+
+    for (i = 0; i < innerParticles.length; i++) {
+        innerParticles[i].update(breath);
+        innerParticles[i].draw(breath);
+    }
+    for (i = 0; i < outerParticles.length; i++) {
+        outerParticles[i].update(breath);
+        outerParticles[i].draw(breath);
+    }
+    for (i = rays.length - 1; i >= 0; i--) {
+        rays[i].update();
+        rays[i].draw();
+        if (rays[i].life <= 0) {
+            rays.splice(i, 1);
+        }
+    }
+
+    drawCore(breath);
+    drawRadar();
+
+    ctx.fillStyle = 'rgba(0, 180, 230, ' + (0.06 + Math.min(1, starSpeed / 6) * 0.08) + ')';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('速度 ' + starSpeed.toFixed(1) + 'x', width - 20, height - 20);
+
+    requestAnimationFrame(animate);
+}
+
+init();
+updateTimer();
+animate();
+</script>
+</body>
+</html>

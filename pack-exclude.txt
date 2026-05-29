@@ -1,0 +1,13 @@
+.venv
+__pycache__
+packages
+*.pyc
+*.pyo
+dist
+build
+*.zip
+打包便携包.bat
+pack-exclude.txt
+安装依赖.bat
+启动服务.bat
+打包便携包

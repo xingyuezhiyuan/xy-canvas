@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 视角变换</title>
+    <script src="/static/modules/auth-token.js?v=20260525001"></script>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/tailwind.min.css?v=20260521039">
+    <script src="/static/theme.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f8f8fa;
+            color: #1a1a2e;
+            min-height: 100vh;
+        }
+
+        body.studio-theme-dark {
+            background: #0a0e17;
+            color: #e0e7ef;
+        }
+
+        body.studio-theme-dark .panel {
+            background: #0d1520;
+            border-color: #1a2a3a;
+        }
+
+        body.studio-theme-dark .upload-area {
+            background: #0d1520;
+            border-color: #1a2a3a;
+        }
+
+        body.studio-theme-dark .upload-area:hover {
+            border-color: #00b4d8;
+            background: rgba(0, 180, 216, 0.1);
+        }
+
+        body.studio-theme-dark .param-input,
+        body.studio-theme-dark .prompt-textarea {
+            background: #0d1520;
+            border-color: #1a2a3a;
+            color: #e0e7ef;
+        }
+
+        body.studio-theme-dark .preview-container {
+            border-color: #1a2a3a;
+        }
+
+        body.studio-theme-dark .viewer-container {
+            border-color: #1a2a3a;
+        }
+
+        body.studio-theme-dark .quick-prompt-btn {
+            background: rgba(0, 180, 216, 0.1);
+            border-color: rgba(0, 180, 216, 0.3);
+            color: #00d9ff;
+        }
+
+        body.studio-theme-dark .status-bar {
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        body.studio-theme-dark .prompt-hint {
+            color: #6a8fa8;
+        }
+
+        body.studio-theme-dark .output-placeholder {
+            color: #6a8fa8;
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 24px;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        header svg {
+            width: 28px;
+            height: 28px;
+            flex-shrink: 0;
+            filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.5));
+        }
+
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .app-title span {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00b4d8, #00f0ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: #e8f8f5;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #2d9c6f;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2d9c6f;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background: #e74c3c;
+            animation: none;
+        }
+
+        .main-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e7eb;
+        }
+
+        .panel-header {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+        }
+
+        .upload-area {
+            border: 2px dashed #e5e7eb;
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fafafa;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #00b4d8;
+            background: #f0f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #00d9ff;
+            background: #e0f7ff;
+            transform: scale(1.01);
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            color: #00d9ff;
+        }
+
+        .upload-text {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        .upload-hint {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 8px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .preview-container {
+            display: none;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+
+        .preview-container.active {
+            display: block;
+        }
+
+        .preview-image {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .viewer-section {
+            margin-bottom: 20px;
+        }
+
+        .viewer-container {
+            width: 100%;
+            height: 550px;
+            background: #0f0c29;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid #e5e7eb;
+        }
+
+        #viewer-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .viewer-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            padding: 10px 12px;
+            border-radius: 10px;
+            min-width: 200px;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            z-index: 10;
+        }
+
+        .viewer-overlay h3 {
+            color: #00d9ff;
+            margin-bottom: 8px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .viewer-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .viewer-btn {
+            background: rgba(0, 212, 255, 0.2);
+            border: 1px solid rgba(0, 212, 255, 0.4);
+            color: #00d9ff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .viewer-btn:hover {
+            background: rgba(0, 212, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .viewer-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            z-index: 10;
+            color: #c0c0c0;
+        }
+
+        .viewer-info-row {
+            margin-bottom: 3px;
+        }
+
+        .viewer-prompt {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            padding: 10px 12px;
+            border-radius: 10px;
+            max-width: 260px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            z-index: 10;
+        }
+
+        .viewer-prompt h3 {
+            color: #00ff88;
+            margin-bottom: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .viewer-prompt-text {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            color: #e0e0e0;
+            max-height: 100px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Courier New', monospace;
+        }
+
+        .apply-prompt-btn {
+            margin-top: 6px;
+            background: linear-gradient(135deg, #00b4d8, #00f0ff);
+            border: none;
+            color: #0a1628;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.7rem;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .apply-prompt-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+        }
+
+        .viewer-help {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            z-index: 10;
+            max-width: 180px;
+        }
+
+        .viewer-help h4 {
+            color: #00d9ff;
+            margin-bottom: 6px;
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+
+        .viewer-help ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .viewer-help li {
+            color: #c0c0c0;
+            font-size: 0.6rem;
+            margin-bottom: 3px;
+            padding-left: 10px;
+            position: relative;
+        }
+
+        .viewer-help li:before {
+            content: "•";
+            color: #00d9ff;
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        .param-section {
+            margin-bottom: 16px;
+        }
+
+        .param-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .param-input {
+            width: 100%;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1a1a2e;
+            transition: all 0.3s;
+        }
+
+        .param-input:focus {
+            outline: none;
+            border-color: #00d9ff;
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .prompt-section {
+            margin-bottom: 20px;
+        }
+
+        .prompt-textarea {
+            width: 100%;
+            min-height: 100px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1a1a2e;
+            font-family: 'Segoe UI', sans-serif;
+            resize: vertical;
+            transition: all 0.3s;
+        }
+
+        .prompt-textarea:focus {
+            outline: none;
+            border-color: #00d9ff;
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .prompt-hint {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 6px;
+        }
+
+        .quick-prompts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .quick-prompt-btn {
+            background: #f0f9ff;
+            border: 1px solid #e0f2fe;
+            color: #0891b2;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .quick-prompt-btn:hover {
+            background: #e0f7ff;
+            border-color: #00d9ff;
+            transform: translateY(-1px);
+        }
+
+        .generate-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #00b4d8, #00f0ff);
+            color: #0a1628;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3), 0 0 30px rgba(0, 212, 255, 0.15);
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.5), 0 0 40px rgba(0, 212, 255, 0.3);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .output-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .output-image-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .output-placeholder {
+            text-align: center;
+            color: #9ca3af;
+            padding: 80px 20px;
+        }
+
+        .output-placeholder-icon {
+            font-size: 3.5rem;
+            margin-bottom: 16px;
+        }
+
+        .output-image {
+            width: 100%;
+            max-width: 450px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: none;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .output-image:hover {
+            transform: scale(1.02);
+        }
+
+        .output-image.active {
+            display: block;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #00b4d8, #00f0ff);
+            border: none;
+            color: #0a1628;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.3s;
+            display: none;
+        }
+
+        .download-btn.active {
+            display: block;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+        }
+
+        .status-bar {
+            padding: 12px;
+            border-radius: 10px;
+            background: #f3f4f6;
+            display: none;
+        }
+
+        .status-bar.active {
+            display: block;
+        }
+
+        .status-message {
+            font-size: 0.85rem;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00b4d8, #00f0ff);
+            width: 0%;
+            transition: width 0.3s;
+            border-radius: 3px;
+        }
+
+        .progress-text {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 6px;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(0, 180, 216, 0.3);
+            border-radius: 50%;
+            border-top-color: #00b4d8;
+            animation: spin 1s linear infinite;
+        }
+
+        .image-preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .image-preview-modal.active {
+            display: flex;
+        }
+
+        .image-preview-modal img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 10px;
+        }
+
+        .image-preview-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 2rem;
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .image-preview-close:hover {
+            transform: scale(1.2);
+            color: #00d9ff;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== 画廊样式 ===== */
+        .hidden { display: none !important; }
+
+        .masonry-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        @media (min-width: 768px) {
+            .masonry-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        .masonry-item {
+            aspect-ratio: 1 / 1;
+            border-radius: 24px;
+            overflow: hidden;
+            background: #eee;
+            border: 1px solid #f1f5f9;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            cursor: zoom-in;
+        }
+
+        .masonry-item:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .masonry-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .gallery-lightbox {
+            background: rgba(255, 255, 255, 0.99);
+        }
+
+        .gallery-lightbox:hover #lightboxPrevBtn:not([style*="display: none"]) { opacity: 1 !important; pointer-events: auto !important; }
+        .gallery-lightbox:hover #lightboxNextBtn:not([style*="display: none"]) { opacity: 1 !important; pointer-events: auto !important; }
+
+        /* 加载更多触发器 */
+        .load-more-trigger {
+            padding: 48px 20px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            display: none;
+        }
+
+        .load-more-trigger.visible {
+            display: block;
+        }
+
+        /* 暗色模式适配 */
+        body.studio-theme-dark .masonry-item {
+            background: #111d2a;
+            border-color: rgba(0, 240, 255, 0.08);
+        }
+
+        body.studio-theme-dark .gallery-lightbox {
+            background: rgba(10, 14, 23, 0.99);
+        }
+
+        body.studio-theme-dark .masonry-item img {
+            opacity: 0.9;
+        }
+
+        body.studio-theme-dark .load-more-trigger {
+            color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 3H3v18h18V3z M3 9h18 M9 21V9"/>
+            </svg>
+            <div class="app-title">
+                <span>3D 视角变换</span>
+                <div class="status-badge" id="statusBadge">
+                    <div class="status-dot offline" id="statusDot"></div>
+                    <span id="statusText">检测中...</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <div class="panel input-panel">
+                <div class="panel-header">输入设置</div>
+
+                <div class="upload-area" id="uploadZone">
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-text">点击或拖拽上传图片</div>
+                    <div class="upload-hint">支持 PNG, JPG, WEBP 格式<br>也可使用 <strong>Ctrl+V</strong> 粘贴图片</div>
+                    <input type="file" id="fileInput" accept="image/*">
+                </div>
+
+                <div class="preview-container" id="previewContainer">
+                    <img class="preview-image" id="previewImage" alt="预览">
+                </div>
+
+                <div class="viewer-section">
+                    <div class="viewer-container">
+                        <div id="viewer-canvas"></div>
+
+                        <div class="viewer-overlay">
+                            <h3>🎮 视图控制</h3>
+                            <div class="viewer-controls">
+                                <button class="viewer-btn" id="resetViewBtn">🔄 重置</button>
+                                <button class="viewer-btn" id="fitViewBtn">📐 适应</button>
+                                <button class="viewer-btn" id="wireframeBtn">🔲 线框</button>
+                                <button class="viewer-btn" id="autoRotateBtn">🎡 旋转</button>
+                            </div>
+                        </div>
+
+                        <div class="viewer-info">
+                            <div class="viewer-info-row">
+                                <span style="color: #00d9ff;">位置:</span>
+                                <span id="viewerCameraPos">X: 0.00, Y: 0.00, Z: 0.00</span>
+                            </div>
+                            <div class="viewer-info-row">
+                                <span style="color: #00d9ff;">角度:</span>
+                                <span id="viewerViewAngle">H: 0.00°, V: 0.00°</span>
+                            </div>
+                            <div class="viewer-info-row">
+                                <span style="color: #00d9ff;">距离:</span>
+                                <span id="viewerDistance">0.00</span>
+                            </div>
+                        </div>
+
+                        <div class="viewer-prompt">
+                            <h3>📝 镜头参数</h3>
+                            <div class="viewer-prompt-text" id="viewerPromptText">请上传图片...</div>
+                            <button class="apply-prompt-btn" id="applyViewerPromptBtn">📋 一键应用参数</button>
+                        </div>
+
+                        <div class="viewer-help">
+                            <h4>🖱️ 操作说明</h4>
+                            <ul>
+                                <li>左键拖拽：旋转视角</li>
+                                <li>滚轮：缩放</li>
+                                <li>右键拖拽：平移视角</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="param-section">
+                    <div class="param-label">图像最长边</div>
+                    <input
+                        type="number"
+                        class="param-input"
+                        id="scaleLengthInput"
+                        min="512"
+                        max="2048"
+                        step="64"
+                        value="1024"
+                    >
+                    <div class="prompt-hint">控制生成图像的最长边尺寸，建议512-2048之间</div>
+                </div>
+
+                <div class="param-section">
+                    <div class="param-label">随机种子</div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input
+                            type="number"
+                            class="param-input"
+                            id="seedInput"
+                            value="411725770964575"
+                            style="flex: 1;"
+                        >
+                        <button class="viewer-btn" id="randomSeedBtn" style="padding: 8px 12px;">🎲</button>
+                    </div>
+                </div>
+
+                <div class="prompt-section">
+                    <div class="param-label">视角提示词</div>
+                    <textarea
+                        class="prompt-textarea"
+                        id="promptInput"
+                        placeholder="输入视角描述，或从 3D 预览器一键应用参数"
+                    ><sks> front view eye-level shot medium shot</textarea>
+                    <div class="prompt-hint">格式：&lt;sks&gt; [视角] [仰角] [景别] - 可从 3D 预览器一键应用参数</div>
+
+                    <div class="quick-prompts">
+                        <button class="quick-prompt-btn" data-prompt="<sks> front view eye-level shot medium shot">🎯 正面平视</button>
+                        <button class="quick-prompt-btn" data-prompt="<sks> right side view eye-level shot medium shot">➡️ 右侧视角</button>
+                        <button class="quick-prompt-btn" data-prompt="<sks> left side view eye-level shot medium shot">⬅️ 左侧视角</button>
+                        <button class="quick-prompt-btn" data-prompt="<sks> back view eye-level shot medium shot">🔄 背面视角</button>
+                        <button class="quick-prompt-btn" data-prompt="<sks> front view high-angle shot medium shot">⬆️ 俯视视角</button>
+                        <button class="quick-prompt-btn" data-prompt="<sks> front view low-angle shot medium shot">⬇️ 仰视视角</button>
+                        <button class="quick-prompt-btn" data-prompt="<sks> front-right quarter view elevated shot medium shot">↗️ 右前上方</button>
+                        <button class="quick-prompt-btn" data-prompt="<sks> front-left quarter view elevated shot medium shot">↖️ 左前上方</button>
+                    </div>
+                </div>
+
+                <button class="generate-btn" id="mainGenBtn" disabled>
+                    🚀 生成
+                </button>
+
+                <div id="progressInline" style="display: none; margin-top: 16px; padding: 16px 20px; background: linear-gradient(135deg, rgba(0, 180, 216, 0.06), rgba(0, 240, 255, 0.04)); border-radius: 14px; border: 1px solid rgba(0, 212, 255, 0.15);">
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <div style="flex: 1; height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; position: relative;">
+                            <div id="progressFill" style="height: 100%; width: 0%; background: linear-gradient(90deg, #00b4d8, #00f0ff); border-radius: 999px; transition: width 0.3s ease; position: relative; box-shadow: 0 0 12px rgba(0, 212, 255, 0.6), 0 0 4px rgba(0, 240, 255, 0.4);"></div>
+                        </div>
+                        <span id="progressPercent" style="font-size: 13px; font-weight: 700; color: #00b4d8; min-width: 42px; text-align: right; font-variant-numeric: tabular-nums;">0%</span>
+                    </div>
+                    <div id="progressStatus" style="margin-top: 8px; font-size: 10px; font-weight: 600; color: #9ca3af; letter-spacing: 0.02em;">准备中...</div>
+                </div>
+
+                <div class="status-bar" id="statusBar">
+                    <div class="status-message">
+                        <span id="statusIndicator"></span>
+                        <span id="statusMsg">准备就绪</span>
+                    </div>
+                    <div class="progress-container" id="progressContainer">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                    <div class="progress-text" id="progressText"></div>
+                </div>
+            </div>
+
+            <div class="output-panel">
+                <div id="masonry" class="masonry-grid"></div>
+                <div id="loadMoreTrigger" class="load-more-trigger">Load More Archive</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 灯箱预览 -->
+    <div id="lightbox" onclick="handleOutsideClick(event)" class="hidden fixed inset-0 z-50 gallery-lightbox bg-white/95 backdrop-blur-3xl flex items-center justify-center p-8 overflow-auto">
+        <button onclick="closeLightbox()" class="absolute top-10 right-10 p-2 hover:rotate-90 transition-transform duration-500">
+            <span style="font-size: 2rem;">&times;</span>
+        </button>
+        <button id="lightboxPrevBtn" onclick="ImageViewer.prevImage()" class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all opacity-0 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </button>
+        <button id="lightboxNextBtn" onclick="ImageViewer.nextImage()" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all opacity-0 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m9 18 6-6-6-6"/>
+            </svg>
+        </button>
+        <img id="lightboxImg" src="" class="max-h-[80vh] rounded-3xl shadow-2xl">
+        <div id="lightboxRes" class="absolute top-4 left-4 bg-black/30 backdrop-blur-md border border-white/20 text-white px-3 py-1.5 rounded-full text-[10px] font-medium tracking-wider opacity-0 transition-opacity duration-300 pointer-events-none z-30"></div>
+        <button onclick="downloadImage()" class="absolute top-10 right-20 p-2 bg-black text-white rounded-xl hover:scale-105 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" x2="12" y1="15" y2="3"/>
+            </svg>
+        </button>
+    </div>
+
+    <script src="/static/modules/image-viewer.js?v=20260522001"></script>
+    <script src="/static/three.min.js?v=20260521001"></script>
+    <script src="/static/OrbitControls.js?v=20260521001"></script>
+
+    <script>
+        // 自动检测访问来源：localhost/127.0.0.1 使用直连模式，局域网使用代理模式
+        const _isLocalAccess = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+        const COMFYUI_CONFIG = {"local_address": "127.0.0.1:8188", "cloud_address": "https://kg03rrnf6rg9bxab-8188.container.x-gpu.com/", "active_server": _isLocalAccess ? "本地服务器" : "云端服务器"};
+
+        let COMFYUI_SERVER = 'http://127.0.0.1:8188';
+        let IS_LOCAL_SERVER = _isLocalAccess;
+        const CLIENT_ID = localStorage.getItem("client_id") || generateUUID();
+        localStorage.setItem("client_id", CLIENT_ID);
+        let uploadedImageName = null;
+        let ws = null;
+
+        // 画廊相关变量
+        let allHistory = [];
+        let currentIndex = 0;
+        const PAGE_SIZE = 15;
+        let isLoading = false;
+        let comfyWs = null;
+        let wsExecutionDone = false;
+
+        let viewerScene, viewerCamera, viewerRenderer, viewerControls;
+        let viewerImageGroup, viewerImageTexture;
+        let viewerGridHelper;
+        let viewerIsWireframe = false;
+        let viewerIsAutoRotating = false;
+        let viewerCurrentImageSize = null;
+        const viewerInitialCameraPosition = new THREE.Vector3(5, 3, 5);
+        const viewerImageThickness = 0.1;
+
+        const WORKFLOW_CONFIG = {
+            name: "3D 视角变换",
+            type: "angle",
+            workflow: {
+                "1": {
+                    "inputs": { "prompt": "", "clip": ["4", 0], "vae": ["3", 0], "image1": ["11", 0] },
+                    "class_type": "TextEncodeQwenImageEditPlus",
+                    "_meta": { "title": "文本编码（QwenImageEditPlus）" }
+                },
+                "2": {
+                    "inputs": { "pixels": ["11", 0], "vae": ["3", 0] },
+                    "class_type": "VAEEncode",
+                    "_meta": { "title": "VAE编码" }
+                },
+                "3": {
+                    "inputs": { "vae_name": "qwen_image_vae.safetensors" },
+                    "class_type": "VAELoader",
+                    "_meta": { "title": "加载VAE" }
+                },
+                "4": {
+                    "inputs": { "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors", "type": "qwen_image", "device": "default" },
+                    "class_type": "CLIPLoader",
+                    "_meta": { "title": "加载CLIP" }
+                },
+                "5": {
+                    "inputs": { "lora_name": "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors", "strength_model": 1, "model": ["6", 0] },
+                    "class_type": "LoraLoaderModelOnly",
+                    "_meta": { "title": "LoRA加载器（仅模型）" }
+                },
+                "6": {
+                    "inputs": { "lora_name": "qwen-image-edit-2511-multiple-angles-lora.safetensors", "strength_model": 1, "model": ["7", 0] },
+                    "class_type": "LoraLoaderModelOnly",
+                    "_meta": { "title": "LoRA加载器（仅模型）" }
+                },
+                "7": {
+                    "inputs": { "unet_name": "qwen_image_edit_2511_fp8mixed.safetensors", "weight_dtype": "default" },
+                    "class_type": "UNETLoader",
+                    "_meta": { "title": "UNet加载器" }
+                },
+                "8": {
+                    "inputs": { "prompt": ["55", 0], "clip": ["4", 0], "vae": ["3", 0], "image1": ["11", 0] },
+                    "class_type": "TextEncodeQwenImageEditPlus",
+                    "_meta": { "title": "TextEncodeQwenImageEditPlus (Positive)" }
+                },
+                "11": {
+                    "inputs": { "aspect_ratio": "original", "proportional_width": 1, "proportional_height": 1, "fit": "crop", "method": "lanczos", "round_to_multiple": "8", "scale_to_side": "longest", "scale_to_length": 1024, "background_color": "#000000", "image": ["14", 0] },
+                    "class_type": "LayerUtility: ImageScaleByAspectRatio V2",
+                    "_meta": { "title": "图层工具：按宽高比缩放 V2" }
+                },
+                "13": {
+                    "inputs": { "filename_prefix": "Qwen_Edit_2511", "images": ["21", 0] },
+                    "class_type": "SaveImage",
+                    "_meta": { "title": "保存图像" }
+                },
+                "14": {
+                    "inputs": { "image": "placeholder.png" },
+                    "class_type": "LoadImage",
+                    "_meta": { "title": "加载图像" }
+                },
+                "16": {
+                    "inputs": { "shift": 3.1, "model": ["5", 0] },
+                    "class_type": "ModelSamplingAuraFlow",
+                    "_meta": { "title": "采样算法（AuraFlow）" }
+                },
+                "17": {
+                    "inputs": { "strength": 1, "model": ["16", 0] },
+                    "class_type": "CFGNorm",
+                    "_meta": { "title": "CFG归一化" }
+                },
+                "18": {
+                    "inputs": { "reference_latents_method": "index_timestep_zero", "conditioning": ["8", 0] },
+                    "class_type": "FluxKontextMultiReferenceLatentMethod",
+                    "_meta": { "title": "FluxKontext多参考潜在方法" }
+                },
+                "19": {
+                    "inputs": { "reference_latents_method": "index_timestep_zero", "conditioning": ["1", 0] },
+                    "class_type": "FluxKontextMultiReferenceLatentMethod",
+                    "_meta": { "title": "FluxKontext多参考潜在方法" }
+                },
+                "20": {
+                    "inputs": { "seed": 411725770964575, "steps": 6, "cfg": 1, "sampler_name": "euler", "scheduler": "simple", "denoise": 1, "model": ["17", 0], "positive": ["18", 0], "negative": ["19", 0], "latent_image": ["2", 0] },
+                    "class_type": "KSampler",
+                    "_meta": { "title": "K采样器" }
+                },
+                "21": {
+                    "inputs": { "samples": ["20", 0], "vae": ["3", 0] },
+                    "class_type": "VAEDecode",
+                    "_meta": { "title": "VAE解码" }
+                },
+                "55": {
+                    "inputs": { "text": "<sks> front view eye-level shot medium shot\n" },
+                    "class_type": "CR Text",
+                    "_meta": { "title": "文本" }
+                }
+            },
+            nodeMappings: {
+                "14": { param: "image", label: "输入图像", type: "upload" },
+                "55": { param: "text", label: "视角提示词", type: "textarea" },
+                "20": { param: "seed", label: "随机种子", type: "number" },
+                "11": { param: "scale_to_length", label: "最长边", type: "number" }
+            },
+            apiEndpoint: "/api/generate"
+        };
+
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        async function loadConfig() {
+            const localConfig = localStorage.getItem('comfyui_config');
+            if (localConfig) {
+                try {
+                    const config = JSON.parse(localConfig);
+                    const activeServer = config.active_server || '本地服务器';
+                    IS_LOCAL_SERVER = (activeServer === '本地服务器');
+                    if (activeServer === '云端服务器' && config.cloud_address) {
+                        COMFYUI_SERVER = (config.cloud_address.startsWith('http') ? config.cloud_address : `https://${config.cloud_address}`).replace(/\/+$/, '');
+                    } else if (config.local_address) {
+                        COMFYUI_SERVER = (config.local_address.startsWith('http') ? config.local_address : `http://${config.local_address}`).replace(/\/+$/, '');
+                    }
+                    return;
+                } catch (e) {
+                    console.error('解析本地配置失败:', e);
+                }
+            }
+            // 无 localStorage 配置时，使用自动检测的默认值
+        }
+
+        async function apiFetch(url, options = {}) {
+            if (IS_LOCAL_SERVER) {
+                const directUrl = COMFYUI_SERVER + url;
+                const response = await fetch(directUrl, options);
+                return response;
+            }
+            const headers = {
+                'X-ComfyUI-Server-Url': COMFYUI_SERVER,
+                ...(options.headers || {})
+            };
+            const response = await fetch(url, { ...options, headers });
+            return response;
+        }
+
+        async function checkServerConnection() {
+            try {
+                const statsUrl = IS_LOCAL_SERVER ? '/system_stats' : '/api/comfyui/system_stats';
+                const response = await apiFetch(statsUrl);
+                if (response.ok) {
+                    statusDot.classList.remove('offline');
+                    statusText.textContent = 'System Ready';
+                } else {
+                    throw new Error('Server not responding');
+                }
+            } catch (e) {
+                statusDot.classList.add('offline');
+                statusText.textContent = 'System Offline';
+            }
+        }
+
+        // 后端 WebSocket 连接（监听新图片）
+        const backendSocket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/stats?client_id=${CLIENT_ID}`);
+        backendSocket.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                if (msg.type === 'new_image' && msg.data?.type === 'angle') {
+                    if (!document.getElementById(`history-${msg.data.timestamp}`)) {
+                        allHistory.unshift(msg.data);
+                        renderImageCard(msg.data, true);
+                        currentIndex++;
+                    }
+                }
+            } catch (err) {
+                console.error('WebSocket 消息处理失败:', err);
+            }
+        };
+
+        function updateStatus(message, type = 'info') {
+            const statusBar = document.getElementById('statusBar');
+            const statusMsg = document.getElementById('statusMsg');
+            const statusIndicator = document.getElementById('statusIndicator');
+
+            statusBar.classList.add('active');
+            statusMsg.textContent = message;
+
+            statusIndicator.className = '';
+            if (type === 'processing') {
+                statusIndicator.className = 'loading-spinner';
+            } else if (type === 'error') {
+                statusIndicator.innerHTML = '❌';
+            } else if (type === 'success') {
+                statusIndicator.innerHTML = '✅';
+            }
+        }
+
+        function setLoading(loading) {
+            const btn = document.getElementById('mainGenBtn');
+            const btnText = btn.innerHTML;
+            if (loading) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="loading-spinner" style="display: inline-block; margin-right: 8px;"></span> 生成中...';
+            } else {
+                btn.disabled = !uploadedImageName;
+                btn.innerHTML = '🚀 生成';
+            }
+        }
+
+        let progressInterval = null;
+        let isGenerating = false;
+        let currentPromptId = null;
+
+        function startProgress() {
+            document.getElementById('progressInline').style.display = 'block';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('progressStatus').textContent = '正在提交任务...';
+        }
+
+        function updateRealProgress(msg) {
+            const fill = document.getElementById('progressFill');
+            const percent = document.getElementById('progressPercent');
+            const status = document.getElementById('progressStatus');
+
+            if (msg.status === 'started') {
+                fill.style.width = '2%';
+                percent.textContent = '2%';
+                status.textContent = 'ComfyUI 开始执行...';
+            } else if (msg.status === 'executing') {
+                fill.style.width = '5%';
+                percent.textContent = '5%';
+                const nodeTitle = getNodeTitle(msg.node);
+                status.textContent = `执行节点: ${nodeTitle}`;
+            } else if (msg.status === 'cached') {
+                status.textContent = '部分节点命中缓存';
+            } else if (msg.status === 'sampling') {
+                const value = msg.value || 0;
+                const max = msg.max || 1;
+                const basePct = Math.round((value / max) * 80);
+                const finalPct = 10 + basePct;
+                fill.style.width = `${finalPct}%`;
+                percent.textContent = `${finalPct}%`;
+                status.textContent = `采样中 ${value}/${max}`;
+            } else if (msg.status === 'done') {
+                fill.style.width = '95%';
+                percent.textContent = '95%';
+                status.textContent = '解码保存中...';
+            }
+        }
+
+        function getNodeTitle(nodeId) {
+            const node = WORKFLOW_CONFIG.workflow[nodeId];
+            return node?._meta?.title || `节点 ${nodeId}`;
+        }
+
+        function completeProgress() {
+            document.getElementById('progressFill').style.width = '100%';
+            document.getElementById('progressPercent').textContent = '100%';
+            document.getElementById('progressStatus').textContent = '生成完成！';
+        }
+
+        function hideProgress() {
+            clearTimeout(progressInterval);
+            document.getElementById('progressInline').style.display = 'none';
+            currentPromptId = null;
+        }
+
+        function waitForWsDone(timeoutMs = 120000) {
+            const start = Date.now();
+            return new Promise((resolve) => {
+                const check = () => {
+                    if (wsExecutionDone) return resolve();
+                    if (Date.now() - start > timeoutMs) return resolve();
+                    setTimeout(check, 200);
+                };
+                check();
+            });
+        }
+
+        function openLightbox(url, images = null, startIndex = 0) {
+            if (images && images.length > 1) {
+                ImageViewer.init(images, startIndex);
+            } else {
+                ImageViewer.init([url], 0);
+                document.getElementById('lightboxPrevBtn').style.display = 'none';
+                document.getElementById('lightboxNextBtn').style.display = 'none';
+            }
+        }
+        function closeLightbox() { ImageViewer.closeLightbox(); }
+
+        function handleOutsideClick(e) {
+            if (e.target.id === 'lightbox') {
+                closeLightbox();
+            }
+        }
+
+        async function downloadImage() {
+            const img = document.getElementById('lightboxImg');
+            if (!img.src) return;
+            
+            try {
+                const response = await fetch(img.src);
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Angle_${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error('下载失败:', e);
+                window.open(img.src, '_blank');
+            }
+        }
+
+        async function deleteHistoryItem(timestamp, event) {
+            event.stopPropagation();
+            
+            try {
+                const res = await fetch('/api/history/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timestamp })
+                });
+                
+                const result = await res.json();
+                if (result.success) {
+                    const card = document.getElementById(`history-${timestamp}`);
+                    if (card) card.remove();
+                    
+                    // 从数组中移除
+                    allHistory = allHistory.filter(item => item.timestamp !== timestamp);
+                }
+            } catch (e) {
+                console.error('删除失败:', e);
+                alert('删除失败，请重试');
+            }
+        }
+
+        function renderImageCard(data, isNew = false) {
+            if (document.getElementById(`history-${data.timestamp}`)) return;
+
+            const masonry = document.getElementById('masonry');
+            const card = document.createElement('div');
+            card.id = `history-${data.timestamp}`;
+            card.className = 'masonry-item group cursor-zoom-in';
+            card.onclick = () => {
+                const historyRes = fetch('/api/history?type=angle').then(res => res.json());
+                historyRes.then(history => {
+                    const allImages = history.map(item => item.images[0]).filter(Boolean);
+                    const startIndex = history.findIndex(item => item.timestamp === data.timestamp);
+                    if (data.images && data.images[0]) {
+                        openLightbox(data.images[0], allImages, startIndex);
+                    }
+                });
+            };
+
+            card.innerHTML = `
+                <img src="${data.images && data.images[0] ? data.images[0] : ''}" class="w-full h-full object-cover" loading="lazy">
+                <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <button onclick="deleteHistoryItem('${data.timestamp}', event)" class="w-8 h-8 bg-white/90 backdrop-blur text-black hover:bg-black hover:text-white rounded-lg flex items-center justify-center transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    </button>
+                </div>
+            `;
+
+            isNew ? masonry.prepend(card) : masonry.appendChild(card);
+        }
+
+        async function loadHistory(page = 0) {
+            if (isLoading) return;
+            
+            const trigger = document.getElementById('loadMoreTrigger');
+            
+            try {
+                isLoading = true;
+                
+                if (page === 0) {
+                    allHistory = [];
+                    document.getElementById('masonry').innerHTML = '';
+                    currentIndex = 0;
+                    trigger.classList.add('visible');
+                    trigger.textContent = "Loading Archives...";
+                    
+                    const res = await fetch('/api/history?type=angle');
+                    allHistory = await res.json();
+                } else {
+                    trigger.textContent = "Loading...";
+                    await new Promise(r => setTimeout(r, 400));
+                }
+                
+                const nextData = allHistory.slice(currentIndex, currentIndex + PAGE_SIZE);
+                nextData.forEach(item => renderImageCard(item));
+                currentIndex += nextData.length;
+                
+                if (currentIndex >= allHistory.length) {
+                    trigger.classList.remove('visible');
+                } else {
+                    trigger.classList.add('visible');
+                    trigger.textContent = "Load More Archive";
+                }
+            } catch (e) {
+                console.error('加载历史记录失败:', e);
+                trigger.textContent = "Error Loading History";
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        const loadObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !isLoading && currentIndex < allHistory.length) {
+                loadHistory(1);
+            }
+        }, { threshold: 0.1 });
+
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const promptInput = document.getElementById('promptInput');
+        const seedInput = document.getElementById('seedInput');
+        const scaleLengthInput = document.getElementById('scaleLengthInput');
+        const mainGenBtn = document.getElementById('mainGenBtn');
+
+        uploadZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleFileUpload(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        // 支持 Ctrl+V 粘贴上传图片
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData?.items || [];
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.startsWith('image/')) {
+                    e.preventDefault();
+                    const file = items[i].getAsFile();
+                    handleFileUpload(file);
+                    break;
+                }
+            }
+        });
+
+        async function handleFileUpload(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('请上传图片文件');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                previewContainer.classList.add('active');
+                updateViewerWithImage(e.target.result);
+            };
+            reader.readAsDataURL(file);
+
+            try {
+                updateStatus('正在上传图片...', 'processing');
+                const formData = new FormData();
+                formData.append('files', file);
+
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.files?.length > 0) {
+                    uploadedImageName = data.files[0].comfy_name;
+                    updateGenerateButtonState();
+                    updateStatus('图片上传成功', 'success');
+                }
+            } catch (e) {
+                console.error('Upload error:', e);
+                updateStatus('图片已加载（本地预览模式）', 'info');
+                uploadedImageName = null;
+                if (promptInput.value.trim()) {
+                    mainGenBtn.disabled = false;
+                }
+            }
+        }
+
+        function updateGenerateButtonState() {
+            mainGenBtn.disabled = !uploadedImageName;
+        }
+
+        document.querySelectorAll('.quick-prompt-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                promptInput.value = btn.getAttribute('data-prompt');
+            });
+        });
+
+        document.getElementById('randomSeedBtn').addEventListener('click', () => {
+            seedInput.value = Math.floor(Math.random() * 999999999999999);
+        });
+
+        mainGenBtn.addEventListener('click', async () => {
+            if (!promptInput.value.trim()) {
+                updateStatus('请输入提示词', 'error');
+                return;
+            }
+            if (!uploadedImageName) {
+                updateStatus('请先上传图片', 'error');
+                return;
+            }
+
+            isGenerating = true;
+            startProgress();
+            setLoading(true);
+            updateStatus('正在提交任务...', 'processing');
+
+            wsExecutionDone = false;
+            let comfyWs = null;
+            let wsConnected = false;
+            const wsConnectPromise = new Promise((resolve) => {
+                try {
+                    const wsUrl = buildWsUrl();
+                    const socket = new WebSocket(wsUrl);
+                    socket.onopen = () => {
+                        wsConnected = true;
+                        comfyWs = socket;
+                        socket.onmessage = (event) => {
+                            try {
+                                if (typeof event.data !== 'string') return;
+                                const message = JSON.parse(event.data);
+                                if (message.type === 'execution_start') {
+                                    updateRealProgress({ status: 'started' });
+                                } else if (message.type === 'progress') {
+                                    updateRealProgress({ status: 'sampling', value: message.data.value || 0, max: message.data.max || 1 });
+                                } else if (message.type === 'executing') {
+                                    if (message.data.node === null) {
+                                        updateRealProgress({ status: 'done' });
+                                        if (!wsExecutionDone) { wsExecutionDone = true; }
+                                    } else {
+                                        updateRealProgress({ status: 'executing', node: message.data.node || '' });
+                                    }
+                                } else if (message.type === 'execution_cached') {
+                                    updateRealProgress({ status: 'cached' });
+                                }
+                            } catch (e) {}
+                        };
+                        resolve();
+                    };
+                    socket.onerror = () => { resolve(); };
+                    setTimeout(() => { resolve(); }, 5000);
+                } catch (e) {
+                    resolve();
+                }
+            });
+
+            try {
+                const workflowData = JSON.parse(JSON.stringify(WORKFLOW_CONFIG.workflow));
+                workflowData["14"]["inputs"]["image"] = uploadedImageName;
+                workflowData["55"]["inputs"]["text"] = promptInput.value.trim();
+                workflowData["20"]["inputs"]["seed"] = parseInt(seedInput.value) || 411725770964575;
+                workflowData["11"]["inputs"]["scale_to_length"] = parseInt(scaleLengthInput.value) || 1024;
+
+                await wsConnectPromise;
+
+                // 通过后端 API 提交任务
+                const res = await fetch(WORKFLOW_CONFIG.apiEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: promptInput.value.trim(),
+                        workflow_data: workflowData,
+                        params: {
+                            "14": { image: uploadedImageName },
+                            "55": { text: promptInput.value.trim() },
+                            "20": { seed: parseInt(seedInput.value) || 411725770964575 },
+                            "11": { scale_to_length: parseInt(scaleLengthInput.value) || 1024 }
+                        },
+                        type: "angle",
+                        client_id: CLIENT_ID
+                    })
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+
+                const data = await res.json();
+                currentPromptId = data.prompt_id;
+                document.getElementById('progressStatus').textContent = '任务已提交，等待执行...';
+
+                if (wsConnected) {
+                    await waitForWsDone();
+                } else {
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+
+                // 等待结果
+                await getResult(currentPromptId);
+
+                setLoading(false);
+                completeProgress();
+                setTimeout(() => hideProgress(), 800);
+                updateStatus('生成完成', 'success');
+            } catch (e) {
+                console.error('Generate error:', e);
+                setLoading(false);
+                hideProgress();
+                updateStatus('生成失败：' + e.message, 'error');
+            } finally {
+                isGenerating = false;
+            }
+        });
+
+        async function getResult(promptId) {
+            try {
+                // 从后端获取历史记录
+                const res = await fetch(`/api/history?type=angle`);
+                if (!res.ok) throw new Error('获取历史记录失败');
+                const history = await res.json();
+                
+                // 找到最新的记录（就是我们刚生成的）
+                const promptData = history.find(item => item.prompt_id === promptId);
+                if (!promptData) {
+                    // 如果没找到，等待一下再试
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    const res2 = await fetch(`/api/history?type=angle`);
+                    const history2 = await res2.json();
+                    const promptData2 = history2.find(item => item.prompt_id === promptId);
+                    if (!promptData2) {
+                        throw new Error('未找到生成结果');
+                    }
+                    
+                    // 渲染到前端
+                    renderImageCard(promptData2, true);
+                    allHistory.unshift(promptData2);
+                    currentIndex++;
+                    return;
+                }
+                
+                // 渲染到前端
+                renderImageCard(promptData, true);
+                allHistory.unshift(promptData);
+                currentIndex++;
+            } catch (e) {
+                alert('获取结果失败: ' + e.message);
+            }
+        }
+
+        function initViewer() {
+            const canvasContainer = document.getElementById('viewer-canvas');
+
+            viewerScene = new THREE.Scene();
+            viewerScene.background = new THREE.Color(0x0f0c29);
+
+            viewerCamera = new THREE.PerspectiveCamera(60, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 1000);
+            viewerCamera.position.copy(viewerInitialCameraPosition);
+
+            viewerRenderer = new THREE.WebGLRenderer({ antialias: true });
+            viewerRenderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+            viewerRenderer.setPixelRatio(window.devicePixelRatio);
+            canvasContainer.appendChild(viewerRenderer.domElement);
+
+            viewerControls = new THREE.OrbitControls(viewerCamera, viewerRenderer.domElement);
+            viewerControls.enableDamping = true;
+            viewerControls.dampingFactor = 0.1;
+            viewerControls.target.set(0, 0, 0);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            viewerScene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            viewerScene.add(directionalLight);
+
+            viewerGridHelper = new THREE.GridHelper(10, 10, 0x00d9ff, 0x00d9ff);
+            viewerGridHelper.material.opacity = 0.15;
+            viewerGridHelper.material.transparent = true;
+            viewerScene.add(viewerGridHelper);
+
+            const axesHelper = new THREE.AxesHelper(3);
+            viewerScene.add(axesHelper);
+
+            viewerImageGroup = new THREE.Group();
+            viewerScene.add(viewerImageGroup);
+
+            window.addEventListener('resize', () => {
+                const width = canvasContainer.clientWidth;
+                const height = canvasContainer.clientHeight;
+                viewerCamera.aspect = width / height;
+                viewerCamera.updateProjectionMatrix();
+                viewerRenderer.setSize(width, height);
+            });
+
+            animateViewer();
+        }
+
+        function loadViewerImageTexture(imageUrl) {
+            const loader = new THREE.TextureLoader();
+            loader.load(imageUrl, (texture) => {
+                viewerImageTexture = texture;
+
+                viewerImageGroup.clear();
+
+                const aspect = texture.image.width / texture.image.height;
+                const planeWidth = 4;
+                const planeHeight = planeWidth / aspect;
+
+                const geometry = new THREE.BoxGeometry(planeWidth, planeHeight, viewerImageThickness);
+                const material = new THREE.MeshStandardMaterial({
+                    map: texture,
+                    transparent: true,
+                    side: THREE.DoubleSide
+                });
+
+                const mesh = new THREE.Mesh(geometry, material);
+                viewerImageGroup.add(mesh);
+
+                viewerCurrentImageSize = { width: texture.image.width, height: texture.image.height };
+
+                fitViewerViewToImage(texture.image.width, texture.image.height);
+            }, undefined, (error) => {
+                console.error('加载 3D 查看器纹理失败:', error);
+            });
+        }
+
+        function fitViewerViewToImage(width, height) {
+            const aspect = width / height;
+            const distance = Math.max(4, aspect * 3);
+            viewerCamera.position.set(distance * 0.7, distance * 0.5, distance * 0.7);
+            viewerControls.target.set(0, 0, 0);
+            viewerControls.update();
+        }
+
+        function resetViewerView() {
+            viewerCamera.position.copy(viewerInitialCameraPosition);
+            viewerControls.target.set(0, 0, 0);
+            viewerControls.update();
+        }
+
+        function updateViewerCoordinateDisplay() {
+            const pos = viewerCamera.position;
+            const target = viewerControls.target;
+            const distance = pos.distanceTo(target);
+
+            document.getElementById('viewerCameraPos').textContent =
+                `X: ${pos.x.toFixed(2)}, Y: ${pos.y.toFixed(2)}, Z: ${pos.z.toFixed(2)}`;
+
+            let horizontalAngle = Math.atan2(pos.x - target.x, pos.z - target.z) * 180 / Math.PI;
+            if (horizontalAngle < 0) horizontalAngle += 360;
+            const verticalAngle = Math.asin((pos.y - target.y) / distance) * 180 / Math.PI;
+
+            document.getElementById('viewerViewAngle').textContent =
+                `H: ${horizontalAngle.toFixed(1)}°, V: ${verticalAngle.toFixed(1)}°`;
+
+            document.getElementById('viewerDistance').textContent = distance.toFixed(2);
+        }
+
+        function generateViewerPrompt() {
+            const pos = viewerCamera.position;
+            const target = viewerControls.target;
+            const distance = pos.distanceTo(target);
+
+            let horizontalAngle = Math.atan2(pos.x - target.x, pos.z - target.z) * 180 / Math.PI;
+            if (horizontalAngle < 0) horizontalAngle += 360;
+
+            const verticalAngle = Math.asin((pos.y - target.y) / distance) * 180 / Math.PI;
+
+            let azimuthDesc = '';
+            if (horizontalAngle >= 337.5 || horizontalAngle < 22.5) {
+                azimuthDesc = 'front view';
+            } else if (horizontalAngle >= 22.5 && horizontalAngle < 67.5) {
+                azimuthDesc = 'front-right quarter view';
+            } else if (horizontalAngle >= 67.5 && horizontalAngle < 112.5) {
+                azimuthDesc = 'right side view';
+            } else if (horizontalAngle >= 112.5 && horizontalAngle < 157.5) {
+                azimuthDesc = 'back-right quarter view';
+            } else if (horizontalAngle >= 157.5 && horizontalAngle < 202.5) {
+                azimuthDesc = 'back view';
+            } else if (horizontalAngle >= 202.5 && horizontalAngle < 247.5) {
+                azimuthDesc = 'back-left quarter view';
+            } else if (horizontalAngle >= 247.5 && horizontalAngle < 292.5) {
+                azimuthDesc = 'left side view';
+            } else if (horizontalAngle >= 292.5 && horizontalAngle < 337.5) {
+                azimuthDesc = 'front-left quarter view';
+            }
+
+            let elevationDesc = '';
+            if (verticalAngle < -15) {
+                elevationDesc = 'low-angle shot';
+            } else if (verticalAngle >= -15 && verticalAngle < 15) {
+                elevationDesc = 'eye-level shot';
+            } else if (verticalAngle >= 15 && verticalAngle < 45) {
+                elevationDesc = 'elevated shot';
+            } else {
+                elevationDesc = 'high-angle shot';
+            }
+
+            let distanceDesc = '';
+            if (distance < 3) {
+                distanceDesc = 'close-up';
+            } else if (distance < 7) {
+                distanceDesc = 'medium shot';
+            } else {
+                distanceDesc = 'wide shot';
+            }
+
+            return `<sks> ${azimuthDesc} ${elevationDesc} ${distanceDesc}`;
+        }
+
+        function updateViewerPrompt() {
+            const prompt = generateViewerPrompt();
+            document.getElementById('viewerPromptText').textContent = prompt;
+        }
+
+        function copyViewerPrompt() {
+            const prompt = generateViewerPrompt();
+            promptInput.value = prompt;
+
+            const btn = document.getElementById('applyViewerPromptBtn');
+            btn.textContent = '✅ 已应用！';
+            setTimeout(() => {
+                btn.textContent = '📋 一键应用参数';
+            }, 2000);
+        }
+
+        function animateViewer() {
+            requestAnimationFrame(animateViewer);
+
+            if (viewerIsAutoRotating) {
+                viewerControls.autoRotate = true;
+                viewerControls.autoRotateSpeed = 2.0;
+            } else {
+                viewerControls.autoRotate = false;
+            }
+
+            viewerControls.update();
+            updateViewerCoordinateDisplay();
+            updateViewerPrompt();
+
+            if (viewerRenderer && viewerScene && viewerCamera) {
+                viewerRenderer.render(viewerScene, viewerCamera);
+            }
+        }
+
+        function setupViewerControls() {
+            document.getElementById('resetViewBtn').addEventListener('click', resetViewerView);
+            document.getElementById('fitViewBtn').addEventListener('click', () => {
+                if (viewerCurrentImageSize) {
+                    fitViewerViewToImage(viewerCurrentImageSize.width, viewerCurrentImageSize.height);
+                }
+            });
+            document.getElementById('wireframeBtn').addEventListener('click', () => {
+                viewerIsWireframe = !viewerIsWireframe;
+                if (viewerImageGroup) {
+                    viewerImageGroup.children.forEach(child => {
+                        if (child.material) {
+                            child.material.wireframe = viewerIsWireframe;
+                        }
+                    });
+                }
+            });
+            document.getElementById('autoRotateBtn').addEventListener('click', () => {
+                viewerIsAutoRotating = !viewerIsAutoRotating;
+                const btn = document.getElementById('autoRotateBtn');
+                btn.textContent = viewerIsAutoRotating ? '⏸️ 停止' : '🎡 旋转';
+            });
+            document.getElementById('applyViewerPromptBtn').addEventListener('click', copyViewerPrompt);
+        }
+
+        function updateViewerWithImage(imageUrl) {
+            loadViewerImageTexture(imageUrl);
+        }
+
+        function buildWsUrl() {
+            if (IS_LOCAL_SERVER) {
+                let baseUrl = COMFYUI_SERVER.replace(/\/+$/, '');
+                let wsProtocol = baseUrl.startsWith('https://') ? 'wss' : 'ws';
+                return `${wsProtocol}://${baseUrl.replace(/^https?:\/\//, '')}/ws?clientId=${CLIENT_ID}`;
+            }
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return `${protocol}//${window.location.host}/api/comfyui/ws?clientId=${CLIENT_ID}`;
+        }
+
+        async function initWebSocket() {
+            try {
+                const wsUrl = buildWsUrl();
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {
+                    console.log('ComfyUI WebSocket 连接成功');
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        if (message.type === 'status') {
+                        }
+                    } catch (e) {
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    console.error('ComfyUI WebSocket 错误:', error);
+                };
+
+                ws.onclose = () => {
+                    console.log('ComfyUI WebSocket 连接关闭，3秒后重连...');
+                    setTimeout(initWebSocket, 3000);
+                };
+            } catch (e) {
+                console.error('WebSocket 初始化失败:', e);
+                setTimeout(initWebSocket, 3000);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadConfig();
+            initViewer();
+            setupViewerControls();
+            initWebSocket();
+            checkServerConnection();
+            setInterval(checkServerConnection, 5000);
+            
+            // 加载历史记录
+            loadHistory(0).then(() => {
+                const trigger = document.getElementById('loadMoreTrigger');
+                if (trigger) {
+                    loadObserver.observe(trigger);
+                    trigger.onclick = () => loadHistory(1);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

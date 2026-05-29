@@ -1,0 +1,89 @@
+{
+  "3": {
+    "inputs": {
+      "preset_prompt": "Prompt Style - Extreme Detailed",
+      "custom_prompt": "描述这个图像，只输出结果",
+      "system_prompt": "",
+      "inference_mode": "one by one",
+      "max_frames": 24,
+      "max_size": 256,
+      "seed": 498061195854013,
+      "force_offload": false,
+      "save_states": false,
+      "llama_model": [
+        "13",
+        0
+      ],
+      "parameters": [
+        "5",
+        0
+      ],
+      "images": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "llama_cpp_instruct_adv",
+    "_meta": {
+      "title": "llama_cpp_指令（高级）"
+    }
+  },
+  "5": {
+    "inputs": {
+      "max_tokens": 1024,
+      "top_k": 30,
+      "top_p": 0.9,
+      "min_p": 0.05,
+      "typical_p": 1,
+      "temperature": 0.8,
+      "repeat_penalty": 1,
+      "frequency_penalty": 0,
+      "presence_penalty": 1,
+      "mirostat_mode": 0,
+      "mirostat_eta": 0.1,
+      "mirostat_tau": 5,
+      "state_uid": -1
+    },
+    "class_type": "llama_cpp_parameters",
+    "_meta": {
+      "title": "llama_cpp_参数"
+    }
+  },
+  "6": {
+    "inputs": {
+      "image": "img_v3_0211j_f36fefea-73f2-478e-80d2-0a5124e9379g.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "13": {
+    "inputs": {
+      "model": "Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q8_0.gguf",
+      "mmproj": "mmproj-Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-BF16.gguf",
+      "chat_handler": "Qwen3.5",
+      "n_ctx": 8192,
+      "vram_limit": -1,
+      "image_min_tokens": 0,
+      "image_max_tokens": 0
+    },
+    "class_type": "llama_cpp_model_loader",
+    "_meta": {
+      "title": "Llama-Cpp 模型加载器"
+    }
+  },
+  "15": {
+    "inputs": {
+      "text_undefined": "这是一幅风格鲜明的数字插画，描绘了一只极具威胁性的幻想生物。\n\n**主体描述：**\n*   **生物形态**：这只生物外形酷似一条巨大的、半蛇半龙的生物。它有一个粗壮的、类似蛇颈的脖子，连接着一个布满鳞片的、长满尖刺的头颅和一条同样覆盖着甲壳的长尾巴。\n*   **头部细节**：它的头部低垂，张着血盆大口，露出了参差不齐的锯齿状牙齿。口中似乎正喷吐或含着一颗明亮的、球形的绿色能量核心或宝石，这是整个画面的视觉焦点。\n*   **身体结构**：它的身体呈S形弯曲，上半身较粗，下半身逐渐变细。身体表面覆盖着深灰色和紫灰色的金属质感甲片，层层叠叠，如同铠甲一般，给人一种坚硬且危险的感觉。尾巴的末端逐渐收窄，形成一个尖锐的形状，更像一把匕首。\n*   **色彩与光影**：整体色调以深灰、暗紫和黑色为主，营造出一种阴暗、沉重的氛围。明亮的绿色核心与背景的鲜红色形成了强烈的对比，使其格外突出。光影处理简单而有效，突出了生物身体的立体感和甲壳的坚硬质感。\n\n**背景：**\n*   背景是纯粹的、饱和度极高的亮红色，没有任何其他元素。这种大胆的选择不仅让主体生物更加凸显，也极大地增强了画面的紧张感和攻击性，仿佛预示着即将爆发的战斗或能量爆发。\n\n**整体风格：**\n*   画风偏向卡通或半写实风格，线条清晰，色块分明，具有强烈的视觉冲击力和现代感，很可能出自游戏、动漫或网络漫画。",
+      "text": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "ShowText|pysssss",
+    "_meta": {
+      "title": "展示文本🐍"
+    }
+  }
+}

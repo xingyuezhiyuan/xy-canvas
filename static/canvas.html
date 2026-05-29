@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/logo.png" type="image/png">
+    <title>无限画布 v20260526002</title>
+    <script src="/static/modules/auth-token.js?v=20260525001"></script>
+    <link rel="stylesheet" href="/static/tailwind.min.css?v=20260522010">
+    <script src="/static/lucide.min.js?v=20260522010"></script>
+    <script src="/static/theme.js?v=20260509-global-theme-output-drag"></script>
+    <script src="/static/modules/comfyui-registry.js?v=20260515110000"></script>
+    <script src="/static/modules/comfyui-utils.js?v=20260520003"></script>
+    <script src="/static/modules/comfyui-klein.js?v=20260520003"></script>
+    <script src="/static/modules/comfyui-cgstyle.js?v=20260520003"></script>
+    <script src="/static/modules/comfyui-2dstyle.js?v=20260520003"></script>
+    <script src="/static/modules/comfyui-gaoqingxiufu.js?v=20260520003"></script>
+    <script src="/static/modules/comfyui-kuotu.js?v=20260520003"></script>
+    <script src="/static/modules/comfyui-rmbg.js?v=20260520003"></script>
+    <script src="/static/modules/comfyui-qwen-edit.js?v=20260520003"></script>
+    <script src="/static/modules/comfyui-promptgen.js?v=20260520003"></script>
+    <script src="/static/modules/comfyui-yichuwuti.js?v=20260520003"></script>
+    <script src="/static/modules/comfyui-sdmatte.js?v=20260520004"></script>
+    <script src="/static/modules/comfyui-tubiao.js?v=20260520004"></script>
+    <script src="/static/modules/comfyui-style-transfer.js?v=20260526002"></script>
+    <script src="/static/modules/comfyui-tooltips.js?v=20260526005"></script>
+    <script src="/static/modules/comfyui-jiandanbeijing.js?v=20260528019"></script>
+    <script src="/static/modules/image-node.js?v=20260526003"></script>
+    <script src="/static/modules/output-node.js?v=20260522001"></script>
+    <script src="/static/modules/loop-node.js?v=20260518120000"></script>
+    <script src="/static/modules/video-node.js?v=20260518140000"></script>
+    <script src="/static/modules/audio-node.js?v=20260522009"></script>
+    <script src="/static/modules/upload-video-node.js?v=20260522010"></script>
+    <script src="/static/modules/ps-node.js?v=20260519031"></script>
+    <script src="/static/modules/ps-send.js?v=20260519031"></script>
+    <script src="/static/modules/logs-panel.js?v=20260518007"></script>
+        <link rel="stylesheet" href="/static/styles/canvas.css?v=20260522010">
+
+    <link rel="stylesheet" href="/static/theme.css?v=20260511-cyberpunk-cyan">
+</head>
+<body>
+    <div id="shell" class="shell no-canvas">
+        <div class="topbar">
+            <div class="panel canvas-nav">
+                <button id="backToManagerBtn" class="tool-btn" type="button" title="返回画布管理" aria-label="返回画布管理"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
+                <div class="canvas-nav-meta">
+                    <div id="currentCanvasTitle" class="current-canvas-title">未命名画布</div>
+                    <div id="currentCanvasTime" class="current-canvas-time">--</div>
+                </div>
+                <p id="saveState" style="display:none">请选择或新建画布</p>
+            </div>
+            <div class="panel toolbar editor-only">
+                <button class="tool-btn" onclick="window.imageNodeModule.addImageNode()"><i data-lucide="image-plus" class="w-4 h-4"></i>图片</button>
+                <button class="tool-btn" onclick="addPromptNode()"><i data-lucide="text-cursor-input" class="w-4 h-4"></i>提示词</button>
+                <button class="tool-btn" onclick="addAudioNode()"><i data-lucide="music" class="w-4 h-4"></i>音频</button>
+                <button class="tool-btn" onclick="addUploadVideoNode()"><i data-lucide="film" class="w-4 h-4"></i>视频</button>
+                <button class="tool-btn" onclick="addLoopNode()"><i data-lucide="repeat-2" class="w-4 h-4"></i>循环</button>
+                <button class="tool-btn" onclick="addLLMNode()"><i data-lucide="message-square-text" class="w-4 h-4"></i>LLM</button>
+                <button class="tool-btn" onclick="addGeneratorNode()"><i data-lucide="wand-sparkles" class="w-4 h-4"></i>API生成</button>
+                <button class="tool-btn" onclick="addMsGenNode()"><i data-lucide="cloud-lightning" class="w-4 h-4"></i>MS生成</button>
+                <button class="tool-btn" onclick="addComfyNode()"><i data-lucide="workflow" class="w-4 h-4"></i>ComfyUI</button>
+                <button class="tool-btn" onclick="addVideoNode()"><i data-lucide="clapperboard" class="w-4 h-4"></i>视频生成</button>
+                <button class="tool-btn" onclick="addOutputNode()"><i data-lucide="circle-dot" class="w-4 h-4"></i>Output</button>
+                <button class="tool-btn" onclick="groupSelectedImages()"><i data-lucide="group" class="w-4 h-4"></i>分组</button>
+                <button class="tool-btn" onclick="window.openCanvasLog()"><i data-lucide="list-todo" class="w-4 h-4"></i>日志</button>
+                <button id="assetLibBtn" class="tool-btn" type="button" onclick="toggleAssetLibrary()" title="资产库" aria-label="资产库"><i data-lucide="folder-open" class="w-4 h-4"></i>资产库</button>
+            </div>
+        </div>
+
+        <div id="canvasGate" class="canvas-gate">
+            <div class="gate-panel">
+                <div class="gate-head">
+                    <div class="gate-head-text">
+                        <button id="gateBackBtn" class="gate-back-link" type="button"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>返回画布列表</button>
+                        <div class="gate-title-row">
+                            <div id="gateTitleText" class="gate-title">选择画布</div>
+                            <span id="gateCountPill" class="gate-count-pill">0</span>
+                        </div>
+                        <div id="gateSubtitle" class="gate-subtitle">打开已有画布，或新建一个开始创作。</div>
+                    </div>
+                    <div class="gate-head-actions">
+                        <button id="gateRefreshBtn" class="gate-icon-btn" type="button" title="刷新列表" aria-label="刷新列表">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        </button>
+                        <button id="gateTrashBtn" class="gate-icon-btn gate-trash-entry" type="button" title="打开回收站" aria-label="打开回收站">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            <span id="gateTrashCount" class="gate-trash-badge">0</span>
+                        </button>
+                        <button id="gateCreateBtn" class="primary-btn" type="button"><i data-lucide="plus" class="w-4 h-4"></i>新建画布</button>
+                    </div>
+                </div>
+                <div id="gateStatus" class="gate-status">正在加载画布列表...</div>
+                <div class="gate-create-row">
+                    <input id="gateTitleInput" class="gate-name-input" type="text" maxlength="80" placeholder="新画布名称（可留空使用默认）">
+                    <button id="gateConfirmBtn" class="create-confirm" type="button" title="确定" aria-label="确定"><i data-lucide="check" class="w-4 h-4"></i></button>
+                    <button id="gateCancelBtn" class="create-cancel" type="button" title="取消" aria-label="取消"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                <div class="trash-note"><i data-lucide="info" class="w-3.5 h-3.5 inline-block align-text-bottom mr-1"></i>回收站中的画布会在 30 天后自动清理。</div>
+                <div id="gateCanvasList" class="gate-list"></div>
+            </div>
+        </div>
+
+        <div id="board" class="board editor-only">
+            <div id="dropOverlay" class="drop-overlay">拖放图片到画布</div>
+            <div id="selectionBox" class="selection-box"></div>
+            <div id="selectionHub" class="selection-hub"></div>
+            <div id="createMenu" class="create-menu">
+                <button class="menu-btn" onclick="menuAdd('image')"><i data-lucide="image-plus" class="w-4 h-4"></i>图片卡片</button>
+                <button class="menu-btn" onclick="menuAdd('prompt')"><i data-lucide="text-cursor-input" class="w-4 h-4"></i>提示词</button>
+                <button class="menu-btn" onclick="menuAdd('audio')"><i data-lucide="music" class="w-4 h-4"></i>音频</button>
+                <button class="menu-btn" onclick="menuAdd('upload-video')"><i data-lucide="film" class="w-4 h-4"></i>视频</button>
+                <button class="menu-btn" onclick="menuAdd('loop')"><i data-lucide="repeat-2" class="w-4 h-4"></i>循环节点</button>
+                <button class="menu-btn" onclick="menuAdd('llm')"><i data-lucide="message-square-text" class="w-4 h-4"></i>LLM 节点</button>
+                <button class="menu-btn" onclick="menuAdd('generator')"><i data-lucide="wand-sparkles" class="w-4 h-4"></i>API生成</button>
+                <button class="menu-btn" onclick="menuAdd('msgen')"><i data-lucide="cloud-lightning" class="w-4 h-4"></i>Modelscope生成</button>
+                <button class="menu-btn" onclick="menuAdd('comfy')"><i data-lucide="workflow" class="w-4 h-4"></i>ComfyUI 生成</button>
+                <button class="menu-btn" onclick="menuAdd('video')"><i data-lucide="clapperboard" class="w-4 h-4"></i>视频生成</button>
+                <button class="menu-btn" onclick="menuAdd('ps')"><i data-lucide="palette" class="w-4 h-4"></i>获取photoshop图像</button>
+                <button class="menu-btn" onclick="menuAdd('output')"><i data-lucide="circle-dot" class="w-4 h-4"></i>Output</button>
+            </div>
+            <div id="imageNodeMenu" class="create-menu"></div>
+            <!-- 资产库右键菜单（z-index: 65，在资产库面板上方） -->
+            <div id="assetItemMenu" class="asset-item-menu"></div>
+        <div id="logModal" class="log-modal" onclick="closeCanvasLog()">
+            <div class="log-panel" onclick="event.stopPropagation()">
+                <div class="log-head">
+                    <div class="log-title">生成日志</div>
+                    <button class="preview-icon-btn" type="button" onclick="closeCanvasLog()" title="关闭">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div id="logList" class="log-list"></div>
+            </div>
+        </div>
+        <div id="world" class="world">
+                <svg id="links" class="links"></svg>
+                <div id="linkControls" class="link-controls"></div>
+                <div id="nodes"></div>
+            </div>
+        </div>
+        <div class="hint editor-only">拖拽画布移动，Ctrl 框选多选，拖动选中节点可一起移动。图片/提示词节点右下端口拖线到生成节点。</div>
+        <div id="outputLightbox" class="output-lightbox" onclick="window.outputNode.closeLightbox()">
+            <div id="outputPreview" class="output-preview" onclick="event.stopPropagation()">
+                <div id="outputCompareContainer" class="output-compare">
+                    <img id="outputCompareResult" alt="result image">
+                    <div id="outputCompareOriginalWrap" class="output-compare-original-wrap">
+                        <img id="outputCompareOriginal" alt="input image">
+                    </div>
+                    <div id="outputCompareSlider" class="output-compare-slider">
+                        <div class="output-compare-handle"><i data-lucide="move-horizontal" class="w-4 h-4"></i></div>
+                    </div>
+                </div>
+                <img id="outputLightboxImg" class="output-single-img" src="" alt="output preview">
+                <video id="outputLightboxVideo" class="output-single-video" src="" controls playsinline style="display:none"></video>
+                <div class="output-preview-bar">
+                    <div id="outputResolution" class="output-resolution">--</div>
+                    <div class="output-preview-actions">
+                        <button id="outputDownloadBtn" class="preview-icon-btn" type="button" title="下载" aria-label="下载"><i data-lucide="download" class="w-4 h-4"></i></button>
+                        <button class="preview-icon-btn" type="button" title="关闭" aria-label="关闭" onclick="window.outputNode.closeLightbox()"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="imageEditModal" class="image-edit-modal" onclick="window.imageNodeModule.closeImageEditor()">
+            <div class="image-edit-panel" onclick="event.stopPropagation()">
+                <div class="image-edit-head">
+                    <div>
+                        <div class="editor-tabs" style="display:flex;gap:8px;margin-bottom:8px;">
+                            <button id="cropTab" class="editor-tab" type="button" onclick="window.imageNodeModule.switchEditorMode('crop')" style="height:32px;border-radius:999px;padding:0 14px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;font-weight:800;background:#f0f9ff;color:#0891b2;border:1px solid #cffafe;cursor:pointer;">裁剪</button>
+                            <button id="maskTab" class="editor-tab active" type="button" onclick="window.imageNodeModule.switchEditorMode('mask')" style="height:32px;border-radius:999px;padding:0 14px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;font-weight:800;background:#0891b2;color:#fff;border:none;cursor:pointer;">遮罩</button>
+                            <button id="brushTab" class="editor-tab" type="button" onclick="window.imageNodeModule.switchEditorMode('brush')" style="height:32px;border-radius:999px;padding:0 14px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;font-weight:800;background:#f0f9ff;color:#0891b2;border:1px solid #cffafe;cursor:pointer;">画笔</button>
+                            <button id="gridTab" class="editor-tab" type="button" onclick="window.imageNodeModule.switchEditorMode('grid')" style="height:32px;border-radius:999px;padding:0 14px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;font-weight:800;background:#f0f9ff;color:#0891b2;border:1px solid #cffafe;cursor:pointer;">宫格</button>
+                        </div>
+                        <div class="image-edit-title" id="imageEditTitle">遮罩编辑器</div>
+                        <div class="image-edit-sub" id="imageEditSub">用画笔绘制遮罩区域,白色为遮罩部分</div>
+                    </div>
+                    <button class="preview-icon-btn" type="button" onclick="window.imageNodeModule.closeImageEditor()" title="关闭"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                <div id="imageEditStage" class="image-edit-stage">
+                    <div class="image-edit-stage-inner">
+                        <div id="cropCanvas" class="crop-canvas">
+                            <img id="cropImage" alt="crop source">
+                            <canvas id="maskOverlay" style="position:absolute;inset:0;width:100%;height:100%;border-radius:14px;cursor:crosshair;display:none;"></canvas>
+                            <canvas id="editDrawCanvas" class="edit-draw-canvas" style="display:none;"></canvas>
+                            <div id="cropBox" class="crop-box">
+                                <div id="cropHandle" class="crop-handle"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="maskToolbar" class="image-edit-tools" style="display:none;">
+                    <label>画笔大小:
+                        <input id="brushSizeSlider" type="range" min="5" max="80" value="20" oninput="window.imageNodeModule.updateBrushSize(this.value)">
+                        <span id="brushSizeLabel">20px</span>
+                    </label>
+                    <button id="maskUndoBtn" class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.undoMaskDrawing()" title="撤销" style="opacity:.4" disabled><i data-lucide="undo-2" class="w-4 h-4"></i></button>
+                    <button id="maskRedoBtn" class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.redoMaskDrawing()" title="恢复" style="opacity:.4" disabled><i data-lucide="redo-2" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.clearMask()"><i data-lucide="eraser" class="w-4 h-4"></i>清除</button>
+                    <button class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.fillMask()"><i data-lucide="square" class="w-4 h-4"></i>全部填充</button>
+                </div>
+                <div id="brushToolbar" class="image-edit-tools" style="display:none;">
+                    <button class="image-edit-btn primary" type="button" data-brush-tool="free" onclick="window.imageNodeModule.setBrushTool('free')" title="自由画笔"><i data-lucide="paintbrush" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" data-brush-tool="rect" onclick="window.imageNodeModule.setBrushTool('rect')" title="矩形"><i data-lucide="square" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" data-brush-tool="ellipse" onclick="window.imageNodeModule.setBrushTool('ellipse')" title="椭圆"><i data-lucide="circle" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" data-brush-tool="mark" onclick="window.imageNodeModule.setBrushTool('mark')" title="标志"><i data-lucide="flag" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" data-brush-tool="label" onclick="window.imageNodeModule.setBrushTool('label')" title="数字标签"><i data-lucide="list-ordered" class="w-4 h-4"></i></button>
+                    <label>颜色:
+                        <input id="paintBrushColor" type="color" value="#ff2d55" oninput="window.imageNodeModule.updatePaintBrushColor(this.value)">
+                    </label>
+                    <label>画笔大小:
+                        <input id="paintBrushSize" type="range" min="2" max="80" value="14" oninput="window.imageNodeModule.updatePaintBrushSize(this.value)">
+                        <span id="paintBrushSizeLabel">14px</span>
+                    </label>
+                    <button id="brushUndoBtn" class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.undoBrushDrawing()" title="撤销" style="opacity:.4" disabled><i data-lucide="undo-2" class="w-4 h-4"></i></button>
+                    <button id="brushRedoBtn" class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.redoBrushDrawing()" title="恢复" style="opacity:.4" disabled><i data-lucide="redo-2" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.clearBrushDrawing()"><i data-lucide="eraser" class="w-4 h-4"></i>清空</button>
+                </div>
+                <div id="gridToolbar" class="image-edit-tools" style="display:none;">
+                    <button id="gridCustomToggle" class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.toggleGridCustomMode()" title="自由放置切割线">自定义</button>
+                    <span id="gridRegularControls" style="display:contents">
+                        <label>横向线:
+                            <input id="gridHorizontalLines" type="number" min="0" max="20" value="2" oninput="window.imageNodeModule.refreshGridSplitPreview()">
+                        </label>
+                        <label>竖向线:
+                            <input id="gridVerticalLines" type="number" min="0" max="20" value="2" oninput="window.imageNodeModule.refreshGridSplitPreview()">
+                        </label>
+                    </span>
+                    <div id="gridCustomControls" style="display:none;align-items:center;gap:6px">
+                        <button id="gridOrientH" class="image-edit-btn primary" type="button" onclick="window.imageNodeModule.setGridCustomOrientation('h')" title="点击图片放置水平线">水平</button>
+                        <button id="gridOrientV" class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.setGridCustomOrientation('v')" title="点击图片放置竖直线">垂直</button>
+                        <button id="gridUndoBtn" class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.undoGridCustomLine()" title="撤销上一条线" disabled style="opacity:.4"><i data-lucide="undo-2" class="w-3.5 h-3.5"></i></button>
+                        <button class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.clearGridCustomLines()" title="清除所有自定义线"><i data-lucide="eraser" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                    <label class="grid-gap-control">间隔(px):
+                        <input id="gridGapSize" type="range" min="0" max="240" step="1" value="0" oninput="window.imageNodeModule.syncGridGapValue();window.imageNodeModule.refreshGridSplitPreview()">
+                        <span id="gridGapValue" class="grid-gap-value">0</span>
+                    </label>
+                    <span id="gridSplitCount" class="image-edit-sub"></span>
+                </div>
+                <div class="image-edit-actions">
+                    <span id="imageEditZoomLabel" class="image-edit-zoom-label" title="双击重置缩放" ondblclick="window.imageNodeModule.resetImageEditZoom()">100%</span>
+                    <button id="editorResetBtn" class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.resetCropBox()"><i data-lucide="rotate-ccw" class="w-4 h-4"></i>重置</button>
+                    <button class="image-edit-btn secondary" type="button" onclick="window.imageNodeModule.closeImageEditor()">取消</button>
+                    <button id="editorApplyBtn" class="image-edit-btn primary" type="button" onclick="window.imageNodeModule.applyCurrentMode()">
+                        <i data-lucide="crop" class="w-4 h-4 apply-icon-crop"></i>
+                        <i data-lucide="check-circle" class="w-4 h-4 apply-icon-mask" style="display:none;"></i>
+                        <i data-lucide="paintbrush" class="w-4 h-4 apply-icon-brush" style="display:none;"></i>
+                        <i data-lucide="grid-3x3" class="w-4 h-4 apply-icon-grid" style="display:none;"></i>
+                        <span id="editorApplyText">应用裁剪</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="modelModal" class="model-modal" onclick="closeModelManager()">
+            <div class="model-panel" onclick="event.stopPropagation()">
+                <div class="model-panel-head">
+                    <div>
+                        <div id="modelManagerTitle" class="model-panel-title">管理模型</div>
+                        <div id="modelManagerSub" class="model-panel-sub">拖动调整顺序，删除不需要的模型，也可以输入新模型名称。</div>
+                    </div>
+                    <button class="preview-icon-btn" type="button" title="关闭" aria-label="关闭" onclick="closeModelManager()"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                <div id="modelManagerList" class="model-list"></div>
+                <div class="model-add-row">
+                    <input id="modelManagerNewInput" class="model-input" type="text" placeholder="粘贴或输入模型名称">
+                    <button class="model-btn secondary" type="button" onclick="addManagedModel()"><i data-lucide="plus" class="w-4 h-4"></i>添加</button>
+                </div>
+                <div class="model-actions">
+                    <button class="model-btn secondary" type="button" onclick="closeModelManager()">取消</button>
+                    <button class="model-btn primary" type="button" onclick="saveModelManager()"><i data-lucide="save" class="w-4 h-4"></i>保存</button>
+                </div>
+            </div>
+        </div>
+        <div id="outputNodeMenu" class="context-menu"></div>
+
+        <!-- 资产库侧边栏 -->
+        <div id="assetBackdrop" class="asset-backdrop" onclick="closeAssetLibrary()"></div>
+        <div id="assetSidebar" class="asset-sidebar">
+            <div class="asset-head">
+                <div class="asset-head-title"><i data-lucide="folder-open" class="w-4 h-4"></i>资产库</div>
+                <div class="asset-head-actions">
+                    <button class="asset-head-btn" type="button" onclick="refreshAssetList()" title="刷新"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                    <button class="asset-head-btn" type="button" onclick="closeAssetLibrary()" title="关闭"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                </div>
+            </div>
+            <div id="assetContent" class="asset-content">
+                <div class="asset-folder-loading" id="assetLoading"><i data-lucide="loader-2" class="w-4 h-4" style="animation:spin 1s linear infinite"></i>正在加载资产库...</div>
+            </div>
+            <div class="asset-footer">
+                <button class="asset-footer-btn" type="button" onclick="showComingSoon('保存工作流')"><i data-lucide="file-code" class="w-3.5 h-3.5"></i>保存工作流</button>
+                <button class="asset-footer-btn" type="button" onclick="showComingSoon('保存画布')"><i data-lucide="save" class="w-3.5 h-3.5"></i>保存画布</button>
+            </div>
+        </div>
+        <div id="assetDragHint" class="asset-drag-hint">拖放图片到资产库</div>
+    </div>
+
+        <script src="/static/modules/canvas-all.js?v=20260528019"></script>
+    <script src="/static/modules/minimap-nav.js?v=20260522010"></script>
+    <script src="/static/modules/llm-node.js?v=20260526003"></script>
+    <script src="/static/modules/generator-node.js?v=20260528019"></script>
+    <script src="/static/modules/msgen-node.js?v=20260526003"></script>
+    <script src="/static/modules/asset-library.js?v=20260522010"></script>
+</body>
+</html>

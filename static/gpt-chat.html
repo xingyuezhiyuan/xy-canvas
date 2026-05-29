@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/logo.png" type="image/png">
+    <title>GPT 对话</title>
+    <script src="/static/modules/auth-token.js?v=20260525001"></script>
+    <link rel="stylesheet" href="/static/tailwind.min.css?v=20260520011">
+    <script src="/static/lucide.min.js?v=20260520001"></script>
+    <script src="/static/theme.js?v=20260509-global-theme-output-drag"></script>
+    <style>
+        :root { --ease:cubic-bezier(.4,0,.2,1); --content-width:1160px; --accent:#00b4d8; --bg:#f0f4fa; }
+        * { box-sizing:border-box; }
+        body { margin:0; height:100vh; overflow:hidden; background:#f0f4fa; color:#0a1628; font-family:"Inter",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; -webkit-font-smoothing:antialiased; }
+        .chat-shell { height:100vh; display:flex; flex-direction:column; min-width:0; }
+        .topbar { height:82px; padding:0 36px; border-bottom:1px solid #c5dde8; background:rgba(240,244,250,.88); backdrop-filter:blur(16px); z-index:5; }
+        .topbar-inner { width:min(var(--content-width),100%); height:100%; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:18px; }
+        .title-block { min-width:0; }
+        .title-block h1 { font-size:14px; font-weight:900; letter-spacing:.28em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#00b4d8; }
+        .title-block p { margin-top:5px; font-size:10px; color:#5a7a94; font-weight:800; }
+        .top-actions { display:flex; align-items:center; gap:10px; position:relative; }
+        .action-btn { height:40px; min-width:40px; padding:0 12px; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:8px; background:#fff; border:1px solid #b8d0e4; color:#5a7a94; font-size:10px; font-weight:900; letter-spacing:.14em; transition:all .2s var(--ease); }
+        .action-btn:hover { background:rgba(0,180,216,.06); color:#00b4d8; border-color:rgba(0,180,216,.2); }
+        .history-popover { position:absolute; top:54px; right:0; width:min(360px,calc(100vw - 36px)); max-height:520px; overflow:hidden; background:#fff; border:1px solid #b8d0e4; border-radius:24px; box-shadow:0 24px 60px rgba(0,180,216,.08); padding:12px; display:none; z-index:20; }
+        .history-popover.open { display:block; animation:popIn .18s var(--ease); }
+        .thread-list { max-height:430px; overflow:auto; display:flex; flex-direction:column; gap:8px; padding-right:2px; }
+        .thread-row { display:grid; grid-template-columns:minmax(0,1fr) 34px; gap:6px; align-items:stretch; }
+        .thread-item { width:100%; border:1px solid transparent; background:#e8f0f8; border-radius:16px; padding:13px 14px; text-align:left; transition:all .2s var(--ease); min-height:58px; min-width:0; }
+        .thread-item:hover { background:#dce8f4; }
+        .thread-item.active { background:linear-gradient(135deg,#00b4d8,#00f0ff); color:#0a1628; box-shadow:0 4px 15px rgba(0,180,216,.25); }
+        .thread-delete { width:34px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:#cbd5e1; transition:all .2s var(--ease); }
+        .thread-delete:hover { background:#fee2e2; color:#dc2626; }
+        .messages { flex:1; overflow:auto; padding:34px 42px 268px; display:flex; flex-direction:column; align-items:center; gap:18px; }
+        .bubble-row { width:min(var(--content-width),100%); display:flex; gap:12px; align-items:flex-end; }
+        .bubble-row.user { justify-content:flex-end; }
+        .bubble { max-width:min(780px,78%); border-radius:24px; padding:15px 18px; font-size:14px; line-height:1.7; white-space:pre-wrap; word-break:break-word; box-shadow:0 1px 0 rgba(0,0,0,.03); }
+        .bubble.user { background:linear-gradient(135deg,#00b4d8,#0077b6); color:white; border-bottom-right-radius:8px; }
+        .bubble.assistant { background:#fff; border:1px solid #c5dde8; border-bottom-left-radius:8px; }
+        .bubble.assistant.streaming::after { content:""; display:inline-block; width:7px; height:1.2em; margin-left:3px; border-radius:999px; background:#00b4d8; vertical-align:-.2em; animation:cursorBlink .9s steps(2,end) infinite; }
+        .bubble img.generated { display:block; width:min(460px,100%); border-radius:18px; margin-top:10px; border:1px solid rgba(0,180,216,.1); cursor:zoom-in; }
+        .thumbs { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .thumb { width:58px; height:58px; border-radius:14px; object-fit:cover; border:1px solid rgba(255,255,255,.28); }
+        .assistant .thumb { border-color:#c5dde8; }
+        .composer-wrap { position:absolute; left:0; right:0; bottom:0; padding:24px 42px 30px; background:linear-gradient(to top,#f0f4fa 82%,rgba(240,244,250,0)); }
+        .composer { width:min(var(--content-width),100%); margin:0 auto; min-height:184px; background:rgba(255,255,255,.96); border:1px solid #b8d0e4; border-radius:30px; box-shadow:0 14px 38px rgba(0,180,216,.08); padding:12px; display:flex; flex-direction:column; gap:10px; }
+        .mode-switch { background:#e8f0f8; border:1px solid #c5dde8; border-radius:999px; padding:2px; display:flex; gap:2px; }
+        .mode-switch button { height:30px; min-width:70px; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:5px; color:#5a7a94; font-size:10px; font-weight:600; letter-spacing:.02em; transition:all .2s var(--ease); }
+        .mode-switch button.active { background:#fff; color:#00b4d8; box-shadow:0 1px 3px rgba(0,180,216,.08); }
+        /* Provider Switch */
+        .provider-switch { background:#e8f0f8; border:1px solid #c5dde8; border-radius:999px; padding:2px; display:grid; grid-template-columns:1fr 1fr; gap:2px; }
+        .provider-switch button { height:30px; padding:0 10px; white-space:nowrap; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:5px; color:#5a7a94; font-size:10px; font-weight:600; letter-spacing:.02em; transition:all .2s var(--ease); }
+        .provider-switch button.active { background:#fff; color:#00b4d8; box-shadow:0 1px 3px rgba(0,180,216,.08); }
+        .image-controls { display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; }
+        .image-controls.hidden { display:none; }
+        .mini-ratio { display:flex; gap:2px; background:#e8f0f8; border:1px solid #c5dde8; border-radius:999px; padding:2px; overflow:auto; }
+        .mini-ratio button { height:28px; min-width:42px; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:4px; color:#5a7a94; font-size:10px; font-weight:600; letter-spacing:0; transition:all .2s var(--ease); }
+        .mini-ratio button.active { background:#fff; color:#00b4d8; box-shadow:0 1px 3px rgba(0,180,216,.08); }
+        .resolution-toggle { flex:0 0 auto; background:#e8f0f8; border:1px solid #c5dde8; border-radius:999px; padding:2px; display:flex; gap:2px; }
+        .resolution-option { height:28px; min-width:40px; border-radius:999px; display:flex; align-items:center; justify-content:center; color:#5a7a94; font-size:10px; font-weight:600; transition:all .2s var(--ease); }
+        .resolution-option.active { background:#fff; color:#00b4d8; box-shadow:0 1px 3px rgba(0,180,216,.08); }
+        .composer-body { min-height:148px; border:1px solid #c5dde8; background:#f0f4fa; border-radius:22px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+        .composer-body.drag-over { border-color:rgba(0,180,216,.3); background:#e8f0f8; box-shadow:inset 0 0 0 1px rgba(0,180,216,.15); }
+        textarea { width:100%; flex:1; min-height:82px; max-height:168px; resize:none; outline:none; border:0; padding:2px; font-size:14px; line-height:1.65; background:transparent; color:#0a1628; }
+        textarea:focus { outline:2px solid rgba(0,180,216,.3); border-radius:8px; }
+        .attachment-stack { display:flex; flex-direction:column; align-items:flex-start; gap:8px; min-width:0; }
+        .composer-inside-foot { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
+        .left-tools { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
+        .inline-controls { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
+        .send-btn { width:44px; height:44px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#00b4d8,#00f0ff); color:#0a1628; transition:all .2s var(--ease); flex:0 0 auto; box-shadow:0 4px 15px rgba(0,180,216,.25); }
+        .send-btn:hover { box-shadow:0 4px 25px rgba(0,180,216,.4); transform:translateY(-1px); }
+        .send-btn:disabled { opacity:.45; cursor:not-allowed; transform:none; box-shadow:none; }
+        .ref-strip { display:flex; align-items:center; gap:8px; overflow:auto; min-width:0; max-width:680px; min-height:0; }
+        .ref-strip:empty { display:none; }
+        .ref-chip { position:relative; width:54px; height:54px; border-radius:14px; overflow:hidden; border:1px solid rgba(0,180,216,.15); background:#fff; flex:0 0 auto; }
+        .ref-chip img { width:100%; height:100%; object-fit:cover; }
+        .ref-chip button { position:absolute; top:3px; right:3px; width:18px; height:18px; border-radius:50%; background:rgba(255,255,255,.92); font-size:12px; line-height:18px; }
+        /* MS provider indicator badge */
+        .ms-badge { display:inline-flex; align-items:center; gap:4px; font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; background:rgba(0,180,216,.1); color:#00b4d8; border-radius:999px; padding:3px 8px; }
+        @keyframes popIn { from { opacity:0; transform:translateY(-6px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes cursorBlink { 0%,45% { opacity:1; } 46%,100% { opacity:0; } }
+        @media (max-width:900px){
+            .topbar { padding-left:18px; padding-right:18px; }
+            .messages { padding:24px 18px 360px; }
+            .composer-wrap { padding:20px 18px 24px; }
+            .composer { min-height:296px; }
+            .inline-controls { align-items:stretch; flex-direction:column; flex:1; }
+            .image-controls { align-items:stretch; flex-direction:column; }
+            .resolution-toggle { align-self:flex-start; }
+            .composer-inside-foot { align-items:flex-end; }
+            .ref-strip { max-width:100%; }
+            .bubble { max-width:88%; }
+            .action-btn span { display:none; }
+        }
+    </style>
+    <link rel="stylesheet" href="/static/theme.css?v=20260511-cyberpunk-cyan">
+</head>
+<body>
+    <div class="chat-shell">
+        <header class="topbar">
+            <div class="topbar-inner">
+                <div class="title-block">
+                    <h1 id="chatTitle">新对话</h1>
+                    <p id="modelLabel">Ready</p>
+                </div>
+                <div class="top-actions">
+                    <button onclick="newConversation()" class="action-btn" title="新建对话"><i data-lucide="plus" class="w-4 h-4"></i><span>NEW</span></button>
+                    <button onclick="toggleHistory()" class="action-btn" title="历史对话"><i data-lucide="history" class="w-4 h-4"></i><span>HISTORY</span></button>
+                    <div id="historyPopover" class="history-popover">
+                        <div class="flex items-center justify-between px-2 pb-3">
+                            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Conversations</span>
+                            <button onclick="toggleHistory(false)" class="text-gray-400 hover:text-black"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        </div>
+                        <div id="threadList" class="thread-list"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section id="messages" class="messages"></section>
+
+        <div class="composer-wrap">
+            <div class="composer">
+                <div id="composerBody" class="composer-body">
+                    <textarea id="messageInput" rows="4" placeholder="输入消息，Enter 发送..." oninput="autoGrow(this)" onkeydown="handleKey(event)"></textarea>
+                    <div id="refStrip" class="ref-strip"></div>
+                    <div class="composer-inside-foot">
+                        <div class="left-tools">
+                            <div class="inline-controls">
+                                <div class="mode-switch">
+                                    <button id="chatModeBtn" class="active" onclick="setMode('chat')"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i>Chat</button>
+                                    <button id="imageModeBtn" onclick="setMode('image')"><i data-lucide="image-plus" class="w-3.5 h-3.5"></i>Image</button>
+                                </div>
+                                <!-- Provider Switch (chat mode only) -->
+                                <div id="providerSwitchWrap" class="provider-switch">
+                                    <button id="providerComfly" class="provider-btn active" onclick="setProvider('comfly')">
+                                        <i data-lucide="key-round" class="w-3 h-3"></i>API
+                                    </button>
+                                    <button id="providerMs" class="provider-btn" onclick="setProvider('modelscope')">
+                                        <i data-lucide="cloud" class="w-3 h-3"></i>ModelScope
+                                    </button>
+                                </div>
+                                <div id="imageControls" class="image-controls hidden">
+                                    <div class="mini-ratio">
+                                        <button id="chat-ratio-square" class="active" onclick="setChatRatio('square')"><i data-lucide="square" class="w-3 h-3"></i>1:1</button>
+                                        <button id="chat-ratio-portrait" onclick="setChatRatio('portrait')"><i data-lucide="rectangle-vertical" class="w-3 h-3"></i>2:3</button>
+                                        <button id="chat-ratio-landscape" onclick="setChatRatio('landscape')"><i data-lucide="rectangle-horizontal" class="w-3 h-3"></i>3:2</button>
+                                        <button id="chat-ratio-story" onclick="setChatRatio('story')"><i data-lucide="smartphone" class="w-3 h-3"></i>9:16</button>
+                                        <button id="chat-ratio-wide" onclick="setChatRatio('wide')"><i data-lucide="monitor" class="w-3 h-3"></i>16:9</button>
+                                    </div>
+                                    <div class="resolution-toggle" title="分辨率">
+                                        <button id="chat-res-1k" class="resolution-option active" onclick="setChatResolution('1k')">1K</button>
+                                        <button id="chat-res-2k" class="resolution-option" onclick="setChatResolution('2k')">2K</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="sendBtn" onclick="sendMessage()" class="send-btn" title="发送"><i data-lucide="send" class="w-5 h-5"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        function uuid(){
+            if(crypto?.randomUUID) return crypto.randomUUID();
+            return 'u-' + Math.random().toString(16).slice(2) + Date.now();
+        }
+
+        const USER_KEY = 'gpt_chat_browser_user';
+        const userId = localStorage.getItem(USER_KEY) || uuid();
+        localStorage.setItem(USER_KEY, userId);
+
+        let conversations = [];
+        let currentConversation = null;
+        let mode = 'chat';
+        let provider = 'comfly';
+        let msModel = '';
+        let chatRatio = 'square';
+        let chatResolution = '1k';
+        let refs = [];
+        let config = { chat_model: 'gpt-5.5', image_model: 'gpt-image-1', ms_chat_models: [] };
+
+        const SIZE_OPTIONS = {
+            square: [['1024x1024','1k'], ['1536x1536','2k']],
+            portrait: [['720x1080','1k'], ['1024x1536','2k']],
+            landscape: [['1080x720','1k'], ['1536x1024','2k']],
+            story: [['720x1280','1k'], ['1080x1920','2k']],
+            wide: [['1280x720','1k'], ['1920x1080','2k']]
+        };
+
+        const headers = () => ({'Content-Type':'application/json', 'X-User-ID':userId});
+
+        async function loadConfig(){
+            try {
+                const data = await fetch('/api/config').then(r=>r.json());
+                config = { ...config, ...data };
+                config.chat_model = (config.chat_models || []).find(m => m === 'gpt-5.5') || config.chat_model || 'gpt-5.5';
+                // Default MS model to first in list
+                if (config.ms_chat_models?.length) msModel = config.ms_chat_models[0];
+                updateModelLabel();
+            } catch(e) {}
+        }
+
+        function setProvider(p) {
+            provider = p;
+            document.getElementById('providerComfly').classList.toggle('active', p === 'comfly');
+            document.getElementById('providerMs').classList.toggle('active', p === 'modelscope');
+            updateModelLabel();
+        }
+
+        async function loadConversations(){
+            const data = await fetch('/api/conversations', {headers:{'X-User-ID':userId}}).then(r=>r.json());
+            conversations = data.conversations || [];
+            renderThreads();
+            if(!currentConversation && conversations[0]) await openConversation(conversations[0].id);
+            if(!currentConversation) renderMessages([]);
+        }
+
+        function renderThreads(){
+            const list = document.getElementById('threadList');
+            list.innerHTML = '';
+            if(!conversations.length){
+                list.innerHTML = '<div class="px-3 py-8 text-center text-[11px] font-bold text-gray-300 uppercase tracking-widest">No History</div>';
+                return;
+            }
+            conversations.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'thread-row';
+                const btn = document.createElement('button');
+                btn.className = `thread-item ${currentConversation?.id === item.id ? 'active' : ''}`;
+                btn.onclick = () => openConversation(item.id, true);
+                btn.innerHTML = `<div class="text-sm font-bold truncate">${escapeHtml(item.title || '新对话')}</div><div class="text-[11px] opacity-50 truncate mt-1">${escapeHtml(item.last_message || '')}</div>`;
+                const del = document.createElement('button');
+                del.className = 'thread-delete';
+                del.title = '删除对话';
+                del.onclick = (event) => deleteConversation(item.id, event);
+                del.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i>';
+                row.appendChild(btn);
+                row.appendChild(del);
+                list.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        async function newConversation(){
+            const data = await fetch('/api/conversations', {method:'POST', headers:headers(), body:JSON.stringify({title:'新对话'})}).then(r=>r.json());
+            currentConversation = data.conversation;
+            document.getElementById('chatTitle').textContent = currentConversation.title || '新对话';
+            await loadConversations();
+            renderMessages([]);
+            toggleHistory(false);
+        }
+
+        async function openConversation(id, closePanel=false){
+            const data = await fetch(`/api/conversations/${id}`, {headers:{'X-User-ID':userId}}).then(r=>r.json());
+            currentConversation = data.conversation;
+            document.getElementById('chatTitle').textContent = currentConversation.title || '新对话';
+            renderThreads();
+            renderMessages(currentConversation.messages || []);
+            if(closePanel) toggleHistory(false);
+        }
+
+        async function deleteConversation(id, event){
+            event.stopPropagation();
+            if(!confirm('删除这条历史对话？')) return;
+            await fetch(`/api/conversations/${id}`, {method:'DELETE', headers:{'X-User-ID':userId}});
+            const deletedCurrent = currentConversation?.id === id;
+            if(deletedCurrent){ currentConversation = null; document.getElementById('chatTitle').textContent = '新对话'; renderMessages([]); }
+            await loadConversations();
+            if(deletedCurrent && conversations[0]) await openConversation(conversations[0].id);
+        }
+
+        function toggleHistory(force){
+            const pop = document.getElementById('historyPopover');
+            const shouldOpen = typeof force === 'boolean' ? force : !pop.classList.contains('open');
+            pop.classList.toggle('open', shouldOpen);
+            if(shouldOpen) lucide.createIcons();
+        }
+
+        document.addEventListener('click', (event) => {
+            const actions = document.querySelector('.top-actions');
+            if(actions && !actions.contains(event.target)) toggleHistory(false);
+        });
+
+        function setMode(next){
+            mode = next;
+            document.getElementById('chatModeBtn').classList.toggle('active', next === 'chat');
+            document.getElementById('imageModeBtn').classList.toggle('active', next === 'image');
+            document.getElementById('imageControls').classList.toggle('hidden', next !== 'image');
+            // Hide provider switch in image mode (COMFLY only for images)
+            document.getElementById('providerSwitchWrap').style.display = next === 'image' ? 'none' : '';
+            updateModelLabel();
+        }
+
+        function updateModelLabel(){
+            let label = '';
+            if (mode === 'image') {
+                label = config.image_model || 'Image';
+            } else if (provider === 'modelscope') {
+                label = msModel || (config.ms_chat_models?.[0]) || 'ModelScope';
+                // Shorten the display label
+                label = label.split('/').pop().split(':')[0];
+            } else {
+                label = config.chat_model || 'Chat';
+            }
+            document.getElementById('modelLabel').textContent = label;
+        }
+
+        function setChatRatio(next, preferredSize = ''){
+            chatRatio = next;
+            ['square','portrait','landscape','story','wide'].forEach(item => {
+                document.getElementById(`chat-ratio-${item}`).classList.toggle('active', item === next);
+            });
+            if(preferredSize){ const match = SIZE_OPTIONS[next].find(([value]) => value === preferredSize); if(match) chatResolution = match[1]; }
+            updateChatResolutionUI();
+        }
+
+        function setChatResolution(next){ chatResolution = next; updateChatResolutionUI(); }
+        function updateChatResolutionUI(){
+            document.getElementById('chat-res-1k').classList.toggle('active', chatResolution === '1k');
+            document.getElementById('chat-res-2k').classList.toggle('active', chatResolution === '2k');
+        }
+
+        function currentChatSize(){
+            const options = SIZE_OPTIONS[chatRatio] || SIZE_OPTIONS.square;
+            const match = options.find(([, label]) => label === chatResolution) || options[0];
+            return match[0];
+        }
+
+        function renderMessages(messages){
+            const box = document.getElementById('messages');
+            box.innerHTML = '';
+            if(!messages.length){
+                box.innerHTML = `<div class="m-auto text-center opacity-20"><i data-lucide="messages-square" class="w-14 h-14 mx-auto stroke-[1px]"></i><div class="text-[10px] font-black tracking-[0.5em] uppercase mt-4">READY</div></div>`;
+                lucide.createIcons();
+                return;
+            }
+            messages.forEach(addMessageBubble);
+            scrollBottom();
+        }
+
+        function addMessageBubble(msg){
+            const box = document.getElementById('messages');
+            const row = document.createElement('div');
+            row.className = `bubble-row ${msg.role === 'user' ? 'user' : 'assistant'}`;
+            const bubble = document.createElement('div');
+            bubble.className = `bubble ${msg.role === 'user' ? 'user' : 'assistant'}`;
+            const text = document.createElement('div');
+            text.textContent = msg.type === 'image' ? '生成完成' : (msg.content || '');
+            text.className = 'bubble-text';
+            bubble.appendChild(text);
+            if(msg.attachments?.length){
+                const thumbs = document.createElement('div');
+                thumbs.className = 'thumbs';
+                msg.attachments.forEach(ref => thumbs.insertAdjacentHTML('beforeend', `<img class="thumb" src="${ref.url}">`));
+                bubble.appendChild(thumbs);
+            }
+            if(msg.image_url){
+                const img = document.createElement('img');
+                img.className = 'generated';
+                img.src = msg.image_url;
+                img.onclick = () => window.open(msg.image_url, '_blank');
+                bubble.appendChild(img);
+            }
+            // Show model badge for assistant messages
+            if(msg.role === 'assistant' && msg.model){
+                const badge = document.createElement('div');
+                const modelShort = msg.model.split('/').pop().split(':')[0];
+                const isMs = msg.model.includes('/') && !msg.model.includes('gpt');
+                badge.style.cssText = `margin-top:8px;font-size:9px;font-weight:700;opacity:.45;letter-spacing:.06em;`;
+                badge.textContent = modelShort;
+                bubble.appendChild(badge);
+            }
+            row.appendChild(bubble);
+            box.appendChild(row);
+            return {row, bubble, text};
+        }
+
+        async function uploadFiles(files){
+            if(!files?.length) return;
+            const form = new FormData();
+            [...files].slice(0, 4 - refs.length).forEach(file => form.append('files', file));
+            const data = await fetch('/api/ai/upload', {method:'POST', body:form}).then(r=>r.json());
+            refs.push(...(data.files || []));
+            renderRefs();
+        }
+
+        function renderRefs(){
+            const strip = document.getElementById('refStrip');
+            strip.innerHTML = refs.map((ref,i) => `<div class="ref-chip"><img src="${ref.url}"><button onclick="removeRef(${i})">×</button></div>`).join('');
+        }
+
+        function removeRef(i){ refs.splice(i,1); renderRefs(); }
+
+        window.addEventListener('paste', e => {
+            const files = [...(e.clipboardData?.items || [])].filter(x => x.kind === 'file' && x.type.startsWith('image/')).map(x => x.getAsFile());
+            if(files.length) uploadFiles(files);
+        });
+
+        const composerBody = document.getElementById('composerBody');
+        composerBody.addEventListener('dragover', e => {
+            if(!hasImageFiles(e.dataTransfer?.items)) return;
+            e.preventDefault();
+            composerBody.classList.add('drag-over');
+        });
+        composerBody.addEventListener('dragleave', e => {
+            if(!composerBody.contains(e.relatedTarget)) composerBody.classList.remove('drag-over');
+        });
+        composerBody.addEventListener('drop', e => {
+            if(!hasImageFiles(e.dataTransfer?.items)) return;
+            e.preventDefault();
+            composerBody.classList.remove('drag-over');
+            const files = [...(e.dataTransfer?.files || [])].filter(file => file.type.startsWith('image/'));
+            uploadFiles(files);
+        });
+
+        function hasImageFiles(items){ return [...(items || [])].some(item => item.kind === 'file' && item.type.startsWith('image/')); }
+        function autoGrow(el){ el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 150) + 'px'; }
+        function handleKey(e){ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); } }
+
+        async function sendMessage(){
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if(!message) return;
+            const btn = document.getElementById('sendBtn');
+            btn.disabled = true;
+            const pendingRefs = refs.slice();
+            refs = [];
+            renderRefs();
+            input.value = '';
+            autoGrow(input);
+            if(!currentConversation){
+                currentConversation = {id:'', title:'新对话', messages:[]};
+                document.getElementById('messages').innerHTML = '';
+            }
+            addMessageBubble({role:'user', content:message, attachments:pendingRefs});
+            const assistantBubble = addMessageBubble({role:'assistant', content: mode === 'image' ? '正在生成图片...' : ''});
+            if(mode === 'chat') assistantBubble.bubble.classList.add('streaming');
+            scrollBottom();
+            try {
+                if(mode === 'chat') {
+                    await streamChatMessage(message, pendingRefs, assistantBubble);
+                } else {
+                    const data = await fetch('/api/chat', {
+                        method:'POST',
+                        headers:headers(),
+                        body:JSON.stringify({
+                            conversation_id: currentConversation.id || '',
+                            message,
+                            mode,
+                            size: currentChatSize(),
+                            model: config.chat_model,
+                            image_model: config.image_model,
+                            reference_images: pendingRefs,
+                            provider: 'comfly',
+                        })
+                    }).then(async r => { if(!r.ok) throw new Error((await r.json()).detail || '请求失败'); return r.json(); });
+                    currentConversation = data.conversation;
+                    document.getElementById('chatTitle').textContent = currentConversation.title || '新对话';
+                    renderMessages(currentConversation.messages || []);
+                    await loadConversations();
+                }
+            } catch(err) {
+                renderMessages([...(currentConversation.messages || []), {role:'assistant', content:err.message || '请求失败'}]);
+            } finally {
+                btn.disabled = false;
+                scrollBottom();
+            }
+        }
+
+        async function streamChatMessage(message, pendingRefs, assistantBubble){
+            const currentProvider = provider;
+            const currentMsModel = msModel || (config.ms_chat_models?.[0] || '');
+            const currentChatModel = config.chat_model;
+
+            const res = await fetch('/api/chat/stream', {
+                method:'POST',
+                headers:headers(),
+                body:JSON.stringify({
+                    conversation_id: currentConversation.id || '',
+                    message,
+                    mode:'chat',
+                    model: currentProvider === 'modelscope' ? currentMsModel : currentChatModel,
+                    ms_model: currentProvider === 'modelscope' ? currentMsModel : '',
+                    provider: currentProvider,
+                    reference_images: pendingRefs
+                })
+            });
+            if(!res.ok) throw new Error((await res.json()).detail || '请求失败');
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let fullText = '';
+            while(true){
+                const {value, done} = await reader.read();
+                if(done) break;
+                buffer += decoder.decode(value, {stream:true});
+                const events = buffer.split('\n\n');
+                buffer = events.pop() || '';
+                for(const eventText of events){
+                    const line = eventText.split('\n').find(item => item.startsWith('data:'));
+                    if(!line) continue;
+                    const event = JSON.parse(line.slice(5).trim());
+                    if(event.type === 'meta'){
+                        currentConversation = event.conversation;
+                        document.getElementById('chatTitle').textContent = currentConversation.title || '新对话';
+                    }
+                    if(event.type === 'delta'){
+                        fullText += event.delta || '';
+                        assistantBubble.text.textContent = fullText;
+                        scrollBottom();
+                    }
+                    if(event.type === 'error') throw new Error(event.detail || '请求失败');
+                    if(event.type === 'done'){
+                        assistantBubble.bubble.classList.remove('streaming');
+                        currentConversation = event.conversation;
+                        document.getElementById('chatTitle').textContent = currentConversation.title || '新对话';
+                        renderMessages(currentConversation.messages || []);
+                        await loadConversations();
+                    }
+                }
+            }
+            assistantBubble.bubble.classList.remove('streaming');
+        }
+
+        function scrollBottom(){ requestAnimationFrame(() => { const box = document.getElementById('messages'); box.scrollTop = box.scrollHeight; }); }
+        function escapeHtml(str){ return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+
+        window.onload = async () => {
+            setChatRatio('square');
+            setChatResolution('1k');
+            await loadConfig();
+            await loadConversations();
+        };
+    </script>
+</body>
+</html>

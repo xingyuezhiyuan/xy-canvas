@@ -1,0 +1,23 @@
+{
+  "6": {
+    "inputs": {
+      "output": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "🔹SendTo Photoshop Plugin",
+    "_meta": {
+      "title": "🔹发送至 PS 插件"
+    }
+  },
+  "7": {
+    "inputs": {
+      "image": "1 (6).png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  }
+}

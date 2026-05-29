@@ -1,0 +1,41 @@
+{
+  "title": "custom/黑白线稿",
+  "fields": [
+    {
+      "id": "f_p6tx2zx",
+      "node": "63",
+      "input": "image",
+      "name": "图片",
+      "type": "image",
+      "default": "20260113-114756.jpg",
+      "options": []
+    },
+    {
+      "id": "f_k1y1i58",
+      "node": "144",
+      "input": "custom_path",
+      "name": "custom_path",
+      "type": "text",
+      "default": "",
+      "options": []
+    }
+  ],
+  "mini_cards": {
+    "prompt": {
+      "x": 24,
+      "y": 30
+    },
+    "image": {
+      "x": 24,
+      "y": 210
+    },
+    "custom": {
+      "x": 280,
+      "y": 78
+    },
+    "output": {
+      "x": 540,
+      "y": 120
+    }
+  }
+}

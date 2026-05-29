@@ -1,0 +1,28 @@
+1. API网站注册：
+https://ai.comfly.chat/register?aff=HAOj137551
+
+2. 新建API key
+https://ai.comfly.chat/token
+
+3. 将key填写到软件的API目录中的.env
+COMFLY_API_KEY=sk-xxxxx
+
+4. 创建modelscope的API key
+https://www.modelscope.cn/my/access/token
+
+5. 填写到API目录中的.env
+MODELSCOPE_API_KEY=ms-xxxx
+
+6. 如果调用本地comfyui，需要确保workflows目录中的所有工作流都可以在本地正常运行
+
+7. 如果本地comfyui默认的端口是8188，就可以不用修改这个值。现在这个值是读取后台8188和4090两个端口的显卡，如果有多显卡可以修改端口号。
+COMFYUI_INSTANCES=127.0.0.1:8188,127.0.0.1:4090
+
+----运行说明-----
+
+直接运行“启动服务.bat”，如果缺少依赖，则运行“安装依赖.bat”。
+
+
+---报错问题---
+
+出现任何报错，可以安装Codex Installer.exe，选中这个文件夹，让codex给你解决运行问题，免费账号每周都有免费额度可以使用

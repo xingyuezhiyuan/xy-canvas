@@ -1,0 +1,767 @@
+html.studio-theme-dark,
+html.studio-theme-dark body,
+body.studio-theme-dark {
+    color-scheme: dark;
+    background: #0a0e17 !important;
+    color: #e0e7ef !important;
+}
+
+body.studio-theme-dark {
+    --accent: #00f0ff;
+    --bg: #0a0e17;
+    --bg-base: #0a0e17;
+    --card: #0d1520;
+    --text-main: #e0e7ef;
+}
+
+html.studio-theme-dark body .app-shell,
+html.studio-theme-dark body .sidebar,
+html.studio-theme-dark body .stage,
+body.studio-theme-dark .app-shell,
+body.studio-theme-dark .sidebar,
+body.studio-theme-dark .stage {
+    background: #0a0e17 !important;
+    border-color: #1a2a3a !important;
+}
+
+html.studio-theme-dark body .stage,
+body.studio-theme-dark .stage {
+    box-shadow: inset 0 0 42px rgba(0, 240, 255, 0.02);
+}
+
+html.studio-theme-dark body .nav-item,
+body.studio-theme-dark .nav-item {
+    color: #6a8fa8;
+}
+
+html.studio-theme-dark body .nav-item:hover,
+body.studio-theme-dark .nav-item:hover {
+    background: rgba(0, 240, 255, 0.06) !important;
+    color: #00f0ff !important;
+    border-color: rgba(0, 240, 255, 0.15) !important;
+}
+
+html.studio-theme-dark body .nav-item.active,
+body.studio-theme-dark .nav-item.active {
+    background: rgba(0, 240, 255, 0.12) !important;
+    color: #00f0ff !important;
+    border-color: rgba(0, 240, 255, 0.3) !important;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.15), inset 0 0 15px rgba(0, 240, 255, 0.05) !important;
+}
+
+html.studio-theme-dark body .logo-ring,
+body.studio-theme-dark .logo-ring {
+    border-color: #00f0ff !important;
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.3), inset 0 0 8px rgba(0, 240, 255, 0.1) !important;
+}
+
+html.studio-theme-dark body #logo-dot,
+body.studio-theme-dark #logo-dot {
+    background: #00f0ff !important;
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.5) !important;
+}
+
+html.studio-theme-dark body .nano-monitor,
+body.studio-theme-dark .nano-monitor {
+    background: rgba(0, 240, 255, 0.08) !important;
+    color: #00f0ff;
+    border-color: rgba(0, 240, 255, 0.25) !important;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.1), 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.studio-theme-dark body .divider,
+body.studio-theme-dark .divider {
+    background: rgba(0, 240, 255, 0.12) !important;
+}
+
+html.studio-theme-dark body .theme-dock-btn,
+body.studio-theme-dark .theme-dock-btn {
+    background: #0d1520;
+    border-color: #1a2a3a;
+    color: #6a8fa8;
+}
+
+html.studio-theme-dark body .theme-dock-btn:hover,
+html.studio-theme-dark body .theme-dock-btn.active,
+body.studio-theme-dark .theme-dock-btn:hover,
+body.studio-theme-dark .theme-dock-btn.active {
+    background: rgba(0, 240, 255, 0.12);
+    border-color: rgba(0, 240, 255, 0.3);
+    color: #00f0ff;
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
+}
+
+html.studio-theme-dark body .console-card,
+html.studio-theme-dark body .nano-input,
+html.studio-theme-dark body .upload-item,
+html.studio-theme-dark body .result-frame,
+html.studio-theme-dark body .masonry-item,
+html.studio-theme-dark body .work-panel,
+html.studio-theme-dark body .setting-row,
+html.studio-theme-dark body .tool-panel,
+html.studio-theme-dark body .control-panel,
+html.studio-theme-dark body .topbar,
+html.studio-theme-dark body .composer,
+html.studio-theme-dark body .composer-body,
+html.studio-theme-dark body .bubble.assistant,
+html.studio-theme-dark body .history-popover,
+html.studio-theme-dark body .thread-item,
+html.studio-theme-dark body .lightbox-card,
+html.studio-theme-dark body #lightboxCard,
+html.studio-theme-dark body .bg-white,
+html.studio-theme-dark body .bg-gray-50,
+html.studio-theme-dark body .bg-slate-50,
+html.studio-theme-dark body .bg-gray-50\/50,
+html.studio-theme-dark body .bg-white\/90,
+html.studio-theme-dark body .bg-\[\#fbfdff\],
+body.studio-theme-dark .console-card,
+body.studio-theme-dark .nano-input,
+body.studio-theme-dark .upload-item,
+body.studio-theme-dark .result-frame,
+body.studio-theme-dark .masonry-item,
+body.studio-theme-dark .work-panel,
+body.studio-theme-dark .setting-row,
+body.studio-theme-dark .tool-panel,
+body.studio-theme-dark .control-panel,
+body.studio-theme-dark .topbar,
+body.studio-theme-dark .composer,
+body.studio-theme-dark .composer-body,
+body.studio-theme-dark .bubble.assistant,
+body.studio-theme-dark .history-popover,
+body.studio-theme-dark .thread-item,
+body.studio-theme-dark .lightbox-card,
+body.studio-theme-dark #lightboxCard,
+body.studio-theme-dark .bg-white,
+body.studio-theme-dark .bg-gray-50,
+body.studio-theme-dark .bg-slate-50,
+body.studio-theme-dark .bg-gray-50\/50,
+body.studio-theme-dark .bg-white\/90,
+body.studio-theme-dark .bg-\[\#fbfdff\] {
+    background-color: #0d1520 !important;
+    border-color: #1a2a3a !important;
+    color: #e0e7ef !important;
+}
+
+html.studio-theme-dark body .bg-gray-100,
+html.studio-theme-dark body .bg-slate-100,
+html.studio-theme-dark body .select-shell,
+html.studio-theme-dark body .model-pill,
+html.studio-theme-dark body .ratio-grid,
+html.studio-theme-dark body .resolution-toggle,
+html.studio-theme-dark body .mode-switch,
+html.studio-theme-dark body .mini-ratio,
+body.studio-theme-dark .bg-gray-100,
+body.studio-theme-dark .bg-slate-100,
+body.studio-theme-dark .select-shell,
+body.studio-theme-dark .model-pill,
+body.studio-theme-dark .ratio-grid,
+body.studio-theme-dark .resolution-toggle,
+body.studio-theme-dark .mode-switch,
+body.studio-theme-dark .mini-ratio {
+    background-color: #080c14 !important;
+    border-color: #1a2a3a !important;
+}
+
+html.studio-theme-dark body input,
+html.studio-theme-dark body textarea,
+html.studio-theme-dark body select,
+body.studio-theme-dark input,
+body.studio-theme-dark textarea,
+body.studio-theme-dark select {
+    color: #e0e7ef !important;
+    background: #0d1520 !important;
+    border-color: #1a2a3a !important;
+}
+
+html.studio-theme-dark body input:focus,
+html.studio-theme-dark body textarea:focus,
+body.studio-theme-dark input:focus,
+body.studio-theme-dark textarea:focus {
+    border-color: rgba(0, 240, 255, 0.4) !important;
+    box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.15), 0 0 15px rgba(0, 240, 255, 0.05) !important;
+}
+
+html.studio-theme-dark body input::placeholder,
+html.studio-theme-dark body textarea::placeholder,
+body.studio-theme-dark input::placeholder,
+body.studio-theme-dark textarea::placeholder {
+    color: #3a5a70 !important;
+}
+
+html.studio-theme-dark body .text-black,
+html.studio-theme-dark body .text-gray-700,
+html.studio-theme-dark body .text-slate-700,
+html.studio-theme-dark body .setting-title,
+html.studio-theme-dark body h1,
+html.studio-theme-dark body h2,
+html.studio-theme-dark body h3,
+body.studio-theme-dark .text-black,
+body.studio-theme-dark .text-gray-700,
+body.studio-theme-dark .text-slate-700,
+body.studio-theme-dark .setting-title,
+body.studio-theme-dark h1,
+body.studio-theme-dark h2,
+body.studio-theme-dark h3 {
+    color: #e0e7ef !important;
+}
+
+html.studio-theme-dark body .text-gray-300,
+html.studio-theme-dark body .text-gray-400,
+html.studio-theme-dark body .text-gray-500,
+html.studio-theme-dark body .text-slate-400,
+html.studio-theme-dark body .text-slate-500,
+html.studio-theme-dark body .setting-meta,
+html.studio-theme-dark body .label-nano,
+body.studio-theme-dark .text-gray-300,
+body.studio-theme-dark .text-gray-400,
+body.studio-theme-dark .text-gray-500,
+body.studio-theme-dark .text-slate-400,
+body.studio-theme-dark .text-slate-500,
+body.studio-theme-dark .setting-meta,
+body.studio-theme-dark .label-nano {
+    color: #6a8fa8 !important;
+}
+
+html.studio-theme-dark body .border-gray-100,
+html.studio-theme-dark body .border-gray-200,
+html.studio-theme-dark body .border-gray-300,
+html.studio-theme-dark body .border-slate-100,
+html.studio-theme-dark body .border-slate-200,
+html.studio-theme-dark body .border-black,
+html.studio-theme-dark body .border-white,
+html.studio-theme-dark body .border-\[\#f1f5f9\],
+html.studio-theme-dark body .border-\[\#eef2f7\],
+body.studio-theme-dark .border-gray-100,
+body.studio-theme-dark .border-gray-200,
+body.studio-theme-dark .border-gray-300,
+body.studio-theme-dark .border-slate-100,
+body.studio-theme-dark .border-slate-200,
+body.studio-theme-dark .border-black,
+body.studio-theme-dark .border-white,
+body.studio-theme-dark .border-\[\#f1f5f9\],
+body.studio-theme-dark .border-\[\#eef2f7\] {
+    border-color: #1a2a3a !important;
+}
+
+html.studio-theme-dark body .glass-btn,
+html.studio-theme-dark body .btn-action-dark,
+html.studio-theme-dark body .send-btn,
+html.studio-theme-dark body .gen-btn,
+html.studio-theme-dark body .comfy-run,
+html.studio-theme-dark body .llm-run,
+html.studio-theme-dark body .primary-btn,
+html.studio-theme-dark body .bg-black,
+body.studio-theme-dark .glass-btn,
+body.studio-theme-dark .btn-action-dark,
+body.studio-theme-dark .send-btn,
+body.studio-theme-dark .gen-btn,
+body.studio-theme-dark .comfy-run,
+body.studio-theme-dark .llm-run,
+body.studio-theme-dark .primary-btn,
+body.studio-theme-dark .bg-black {
+    background: linear-gradient(135deg, #00b4d8, #00f0ff) !important;
+    color: #0a0e17 !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3) !important;
+}
+
+html.studio-theme-dark body .glass-btn:hover,
+html.studio-theme-dark body .btn-action-dark:hover,
+html.studio-theme-dark body .bg-black:hover,
+body.studio-theme-dark .glass-btn:hover,
+body.studio-theme-dark .btn-action-dark:hover,
+body.studio-theme-dark .bg-black:hover {
+    background: linear-gradient(135deg, #00f0ff, #00d8e8) !important;
+    box-shadow: 0 4px 25px rgba(0, 240, 255, 0.5) !important;
+}
+
+html.studio-theme-dark body .gallery-lightbox,
+html.studio-theme-dark body #lightbox,
+body.studio-theme-dark .gallery-lightbox,
+body.studio-theme-dark #lightbox {
+    background: rgba(10, 14, 23, 0.85) !important;
+    backdrop-filter: blur(22px) saturate(1.05);
+}
+
+html.studio-theme-dark body .masonry-item:hover,
+html.studio-theme-dark body .console-card:focus-within,
+html.studio-theme-dark body .select-shell:focus-within,
+body.studio-theme-dark .masonry-item:hover,
+body.studio-theme-dark .console-card:focus-within,
+body.studio-theme-dark .select-shell:focus-within {
+    border-color: rgba(0, 240, 255, 0.3) !important;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.1), 0 20px 44px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.studio-theme-dark body .console-card textarea,
+html.studio-theme-dark body #prompt,
+html.studio-theme-dark body #promptInput,
+body.studio-theme-dark .console-card textarea,
+body.studio-theme-dark #prompt,
+body.studio-theme-dark #promptInput {
+    color: #e0e7ef !important;
+    caret-color: #00f0ff;
+}
+
+html.studio-theme-dark body .size-btn,
+html.studio-theme-dark body .model-option,
+html.studio-theme-dark body .ratio-option,
+html.studio-theme-dark body .resolution-option,
+html.studio-theme-dark body .mini-ratio button,
+html.studio-theme-dark body .mode-switch button,
+body.studio-theme-dark .size-btn,
+body.studio-theme-dark .model-option,
+body.studio-theme-dark .ratio-option,
+body.studio-theme-dark .resolution-option,
+body.studio-theme-dark .mini-ratio button,
+body.studio-theme-dark .mode-switch button {
+    background: #0d1520 !important;
+    border-color: #1a2a3a !important;
+    color: #6a8fa8 !important;
+}
+
+html.studio-theme-dark body .size-btn:hover,
+html.studio-theme-dark body .model-option:hover,
+html.studio-theme-dark body .ratio-option:hover,
+html.studio-theme-dark body .resolution-option:hover,
+body.studio-theme-dark .size-btn:hover,
+body.studio-theme-dark .model-option:hover,
+body.studio-theme-dark .ratio-option:hover,
+body.studio-theme-dark .resolution-option:hover {
+    border-color: rgba(0, 240, 255, 0.3) !important;
+    color: #00f0ff !important;
+}
+
+html.studio-theme-dark body .size-btn.active,
+html.studio-theme-dark body .model-option.active,
+html.studio-theme-dark body .ratio-option.active,
+html.studio-theme-dark body .resolution-option.active,
+html.studio-theme-dark body .mini-ratio button.active,
+html.studio-theme-dark body .mode-switch button.active,
+body.studio-theme-dark .size-btn.active,
+body.studio-theme-dark .model-option.active,
+body.studio-theme-dark .ratio-option.active,
+body.studio-theme-dark .resolution-option.active,
+body.studio-theme-dark .mini-ratio button.active,
+body.studio-theme-dark .mode-switch button.active {
+    background: linear-gradient(135deg, #00b4d8, #00f0ff) !important;
+    border-color: #00f0ff !important;
+    color: #0a0e17 !important;
+    box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3) !important;
+}
+
+html.studio-theme-dark body .ios-slider,
+body.studio-theme-dark .ios-slider {
+    background: #1a2a3a !important;
+}
+
+html.studio-theme-dark body .ios-switch input:checked + .ios-slider,
+body.studio-theme-dark .ios-switch input:checked + .ios-slider {
+    background: linear-gradient(135deg, #00b4d8, #00f0ff) !important;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+html.studio-theme-dark body .ios-slider:before,
+body.studio-theme-dark .ios-slider:before {
+    background: #0d1520 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.38) !important;
+}
+
+html.studio-theme-dark body .composer-wrap,
+body.studio-theme-dark .composer-wrap {
+    background: linear-gradient(to top, #0a0e17 82%, rgba(10, 14, 23, 0)) !important;
+}
+
+html.studio-theme-dark body .canvas-gate,
+body.studio-theme-dark .canvas-gate {
+    background-color: #0a0e17 !important;
+    background-image: 
+        radial-gradient(rgba(0, 240, 255, 0.06) 1px, transparent 1px) !important;
+}
+
+html.studio-theme-dark body .gate-panel,
+html.studio-theme-dark body .canvas-item,
+html.studio-theme-dark body .canvas-open,
+body.studio-theme-dark .gate-panel,
+body.studio-theme-dark .canvas-item,
+body.studio-theme-dark .canvas-open {
+    background: #0d1520 !important;
+    border-color: #1a2a3a !important;
+    color: #e0e7ef !important;
+}
+
+html.studio-theme-dark body .canvas-item:hover,
+body.studio-theme-dark .canvas-item:hover {
+    background: #111d2a !important;
+    border-color: rgba(0, 240, 255, 0.15) !important;
+}
+
+html.studio-theme-dark body .canvas-item.active,
+body.studio-theme-dark .canvas-item.active {
+    background: rgba(0, 240, 255, 0.08) !important;
+    border-color: rgba(0, 240, 255, 0.3) !important;
+    color: #00f0ff !important;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.08);
+}
+
+html.studio-theme-dark body .canvas-card-title,
+html.studio-theme-dark body .gate-title,
+html.studio-theme-dark body .gate-name-input,
+body.studio-theme-dark .canvas-card-title,
+body.studio-theme-dark .gate-title,
+body.studio-theme-dark .gate-name-input {
+    color: #e0e7ef !important;
+}
+
+html.studio-theme-dark body .canvas-card-time,
+html.studio-theme-dark body .gate-subtitle,
+body.studio-theme-dark .canvas-card-time {
+    color: #6a8fa8 !important;
+}
+
+body.studio-theme-dark .gate-subtitle {
+    color: #6a8fa8 !important;
+}
+
+html.studio-theme-dark body .canvas-preview-mark,
+html.studio-theme-dark body .canvas-delete,
+html.studio-theme-dark body .secondary-btn,
+html.studio-theme-dark body .gate-back,
+html.studio-theme-dark body .gate-trash-entry,
+html.studio-theme-dark body .create-cancel,
+html.studio-theme-dark body .gate-create-row,
+html.studio-theme-dark body .gate-actions,
+html.studio-theme-dark body .trash-note,
+html.studio-theme-dark body .emoji-picker,
+html.studio-theme-dark body .create-menu,
+html.studio-theme-dark body .selection-hub,
+html.studio-theme-dark body .output-preview,
+body.studio-theme-dark .canvas-preview-mark,
+body.studio-theme-dark .canvas-delete,
+body.studio-theme-dark .secondary-btn,
+body.studio-theme-dark .gate-back,
+body.studio-theme-dark .gate-trash-entry,
+body.studio-theme-dark .create-cancel,
+body.studio-theme-dark .gate-create-row,
+body.studio-theme-dark .gate-actions,
+body.studio-theme-dark .trash-note,
+body.studio-theme-dark .emoji-picker,
+body.studio-theme-dark .create-menu,
+body.studio-theme-dark .selection-hub,
+body.studio-theme-dark .output-preview {
+    background: #0d1520 !important;
+    border-color: #1a2a3a !important;
+    color: #00f0ff !important;
+}
+
+html.studio-theme-dark body .gate-trash-badge,
+body.studio-theme-dark .gate-trash-badge {
+    background: rgba(0, 240, 255, 0.15) !important;
+    color: #00f0ff !important;
+    border-color: rgba(0, 240, 255, 0.3) !important;
+}
+
+html.studio-theme-dark body .secondary-btn.active,
+body.studio-theme-dark .secondary-btn.active {
+    background: linear-gradient(135deg, #00b4d8, #00f0ff) !important;
+    border-color: #00f0ff !important;
+    color: #0a0e17 !important;
+    box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3);
+}
+
+html.studio-theme-dark body .canvas-delete:hover,
+html.studio-theme-dark body .create-cancel:hover,
+body.studio-theme-dark .canvas-delete:hover,
+body.studio-theme-dark .create-cancel:hover {
+    background: rgba(248, 113, 113, 0.1) !important;
+    border-color: rgba(248, 113, 113, 0.3) !important;
+    color: #fca5a5 !important;
+}
+
+html.studio-theme-dark body .canvas-restore:hover,
+body.studio-theme-dark .canvas-restore:hover {
+    background: rgba(0, 240, 255, 0.1) !important;
+    border-color: rgba(0, 240, 255, 0.3) !important;
+    color: #00f0ff !important;
+}
+
+html.studio-theme-dark body .canvas-delete-box,
+body.studio-theme-dark .canvas-delete-box {
+    background: #111d2a !important;
+    border: 1px solid #1a2a3a;
+}
+
+html.studio-theme-dark body .canvas-confirm-btn,
+html.studio-theme-dark body .create-confirm,
+body.studio-theme-dark .canvas-confirm-btn,
+body.studio-theme-dark .create-confirm {
+    background: linear-gradient(135deg, #00b4d8, #00f0ff) !important;
+    color: #0a0e17 !important;
+    box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3);
+}
+
+html.studio-theme-dark body .output-resolution,
+body.studio-theme-dark .output-resolution {
+    background: rgba(13, 21, 32, 0.86) !important;
+    color: #00f0ff !important;
+}
+
+html.studio-theme-dark body .shell .topbar,
+body.studio-theme-dark .shell .topbar {
+    background: transparent !important;
+    border-color: transparent !important;
+    backdrop-filter: none !important;
+}
+
+html.studio-theme-dark body .shell,
+html.studio-theme-dark body .shell .board,
+body.studio-theme-dark .shell,
+body.studio-theme-dark .shell .board {
+    background-color: #0a0e17 !important;
+    background-image: radial-gradient(rgba(0, 240, 255, 0.06) 1px, transparent 1px) !important;
+}
+
+html.studio-theme-dark body .shell.theme-dark,
+body.studio-theme-dark .shell.theme-dark {
+    --page: #0a0e17;
+    --grid: rgba(0, 240, 255, 0.06);
+    --panel: rgba(13, 21, 32, 0.9);
+    --card: #0d1520;
+    --card-solid: #0d1520;
+    --soft: #080c14;
+    --soft-2: #111d2a;
+    --line: rgba(0, 240, 255, 0.1);
+    --line-2: rgba(0, 240, 255, 0.15);
+    --text: #e0e7ef;
+    --muted: #6a8fa8;
+    --faint: #4a6a80;
+    --shadow: rgba(0, 0, 0, 0.3);
+    --strong: #00f0ff;
+    --strong-text: #0a0e17;
+}
+
+html.studio-theme-dark body .shell .panel,
+body.studio-theme-dark .shell .panel {
+    background: rgba(13, 21, 32, 0.88) !important;
+    border: 1px solid rgba(0, 240, 255, 0.1) !important;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.studio-theme-dark body .shell .node,
+body.studio-theme-dark .shell .node {
+    background: #0d1520 !important;
+    border-color: rgba(0, 240, 255, 0.1) !important;
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.3) !important;
+    color: #e0e7ef !important;
+}
+
+html.studio-theme-dark body .shell .node-head,
+body.studio-theme-dark .shell .node-head {
+    background: #0d1520 !important;
+    border-bottom-color: rgba(0, 240, 255, 0.08) !important;
+}
+
+html.studio-theme-dark body .shell .node-title,
+body.studio-theme-dark .shell .node-title {
+    color: #6a8fa8 !important;
+}
+
+html.studio-theme-dark body .shell .node.selected,
+body.studio-theme-dark .shell .node.selected {
+    outline-color: rgba(0, 240, 255, 0.5) !important;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+}
+
+html.studio-theme-dark body .shell .toolbar,
+body.studio-theme-dark .shell .toolbar {
+    gap: 8px;
+}
+
+html.studio-theme-dark body .shell .tool-btn,
+html.studio-theme-dark body .shell .select-lite,
+html.studio-theme-dark body .shell .gen-count-row,
+html.studio-theme-dark body .shell .seg,
+html.studio-theme-dark body .shell .llm-mode,
+html.studio-theme-dark body .shell .mode-tabs,
+body.studio-theme-dark .shell .tool-btn,
+body.studio-theme-dark .shell .select-lite,
+body.studio-theme-dark .shell .gen-count-row,
+body.studio-theme-dark .shell .seg,
+body.studio-theme-dark .shell .llm-mode,
+body.studio-theme-dark .shell .mode-tabs {
+    background: #0d1520 !important;
+    border: 1px solid rgba(0, 240, 255, 0.1) !important;
+    box-shadow: none !important;
+    color: #6a8fa8 !important;
+}
+
+html.studio-theme-dark body .shell .gen-settings,
+html.studio-theme-dark body .shell .setting-row,
+html.studio-theme-dark body .shell .comfy-settings,
+body.studio-theme-dark .shell .gen-settings,
+body.studio-theme-dark .shell .setting-row,
+body.studio-theme-dark .shell .comfy-settings {
+    background: #0d1520 !important;
+    border: 1px solid rgba(0, 240, 255, 0.1) !important;
+    box-shadow: none !important;
+    color: #e0e7ef !important;
+}
+
+html.studio-theme-dark body .shell .setting-title,
+body.studio-theme-dark .shell .setting-title {
+    color: #6a8fa8 !important;
+}
+
+html.studio-theme-dark body .shell .setting-input,
+html.studio-theme-dark body .shell .setting-check,
+html.studio-theme-dark body .shell .gen-count-input,
+body.studio-theme-dark .shell .setting-input,
+body.studio-theme-dark .shell .setting-check,
+body.studio-theme-dark .shell .gen-count-input {
+    background: #0d1520 !important;
+    border-color: rgba(0, 240, 255, 0.1) !important;
+    color: #e0e7ef !important;
+    box-shadow: none !important;
+}
+
+html.studio-theme-dark body .shell .setting-input:focus,
+body.studio-theme-dark .shell .setting-input:focus {
+    border-color: rgba(0, 240, 255, 0.4) !important;
+    box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.15) !important;
+}
+
+html.studio-theme-dark body .shell .gen-step-btn,
+body.studio-theme-dark .shell .gen-step-btn {
+    color: #6a8fa8 !important;
+}
+
+html.studio-theme-dark body .shell .gen-step-btn:hover,
+body.studio-theme-dark .shell .gen-step-btn:hover {
+    background: #111d2a !important;
+    color: #00f0ff !important;
+}
+
+html.studio-theme-dark body .shell .tool-btn:hover,
+html.studio-theme-dark body .shell .select-lite:hover,
+body.studio-theme-dark .shell .tool-btn:hover,
+body.studio-theme-dark .shell .select-lite:hover {
+    background: #111d2a !important;
+    border-color: rgba(0, 240, 255, 0.3) !important;
+    color: #00f0ff !important;
+}
+
+html.studio-theme-dark body .shell .llm-mode button,
+html.studio-theme-dark body .shell .seg button,
+html.studio-theme-dark body .shell .mode-tabs button,
+body.studio-theme-dark .shell .llm-mode button,
+body.studio-theme-dark .shell .seg button,
+body.studio-theme-dark .shell .mode-tabs button {
+    color: #6a8fa8 !important;
+}
+
+html.studio-theme-dark body .shell .llm-mode button.active,
+html.studio-theme-dark body .shell .seg button.active,
+html.studio-theme-dark body .shell .mode-tabs button.active,
+body.studio-theme-dark .shell .llm-mode button.active,
+body.studio-theme-dark .shell .seg button.active,
+body.studio-theme-dark .shell .mode-tabs button.active {
+    background: rgba(0, 240, 255, 0.12) !important;
+    color: #00f0ff !important;
+    border-color: rgba(0, 240, 255, 0.3) !important;
+}
+
+html.studio-theme-dark body .shell .gen-action-btn,
+html.studio-theme-dark body .shell .primary-action,
+body.studio-theme-dark .shell .gen-action-btn,
+body.studio-theme-dark .shell .primary-action {
+    background: linear-gradient(135deg, #00b4d8, #00f0ff) !important;
+    color: #0a0e17 !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3) !important;
+}
+
+html.studio-theme-dark body .shell .gen-action-btn:hover,
+html.studio-theme-dark body .shell .primary-action:hover,
+body.studio-theme-dark .shell .gen-action-btn:hover,
+body.studio-theme-dark .shell .primary-action:hover {
+    box-shadow: 0 4px 25px rgba(0, 240, 255, 0.5) !important;
+}
+
+html.studio-theme-dark body .bubble.user,
+body.studio-theme-dark .bubble.user {
+    background: linear-gradient(135deg, #00b4d8, #0077b6) !important;
+    color: #0a0e17 !important;
+    border-color: rgba(0, 240, 255, 0.2) !important;
+}
+
+html.studio-theme-dark body .bubble.assistant,
+body.studio-theme-dark .bubble.assistant {
+    background: #0d1520 !important;
+    border: 1px solid #1a2a3a !important;
+    color: #e0e7ef !important;
+}
+
+html.studio-theme-dark body .action-btn,
+body.studio-theme-dark .action-btn {
+    background: #0d1520 !important;
+    border-color: #1a2a3a !important;
+    color: #6a8fa8 !important;
+}
+
+html.studio-theme-dark body .action-btn:hover,
+body.studio-theme-dark .action-btn:hover {
+    background: #111d2a !important;
+    border-color: rgba(0, 240, 255, 0.3) !important;
+    color: #00f0ff !important;
+}
+
+html.studio-theme-dark body .thread-item,
+body.studio-theme-dark .thread-item {
+    background: #0d1520 !important;
+    border-color: transparent !important;
+}
+
+html.studio-theme-dark body .thread-item:hover,
+body.studio-theme-dark .thread-item:hover {
+    background: #111d2a !important;
+}
+
+html.studio-theme-dark body .thread-item.active,
+body.studio-theme-dark .thread-item.active {
+    background: rgba(0, 240, 255, 0.12) !important;
+    color: #00f0ff !important;
+    border-color: rgba(0, 240, 255, 0.3) !important;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.08);
+}
+
+html.studio-theme-dark body .history-popover,
+body.studio-theme-dark .history-popover {
+    background: #0d1520 !important;
+    border-color: #1a2a3a !important;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.studio-theme-dark body .preview-img,
+body.studio-theme-dark .preview-img {
+    animation: cyberFadeIn 0.5s ease forwards;
+}
+
+@keyframes cyberFadeIn {
+    from { opacity: 0; filter: brightness(1.5) saturate(1.5); }
+    to { opacity: 1; filter: brightness(1) saturate(1); }
+}
+
+html.studio-theme-dark body .result-frame,
+body.studio-theme-dark .result-frame {
+    background: #0d1520 !important;
+    border: 1px solid #1a2a3a !important;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.03), 0 2px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+html.studio-theme-dark body .tool-panel,
+html.studio-theme-dark body .control-panel,
+body.studio-theme-dark .tool-panel,
+body.studio-theme-dark .control-panel {
+    background: #0d1520 !important;
+    border: 1px solid #1a2a3a !important;
+}

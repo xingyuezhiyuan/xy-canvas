@@ -1,0 +1,42 @@
+# 生成图像输出目录
+output/
+
+# 资产库输入目录
+input/
+
+# 画布数据文件
+data/canvases/
+
+# 图像生成历史记录
+history.json
+
+# API 密钥配置文件（已改为公开）
+# API/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 文档目录
+docs/
+
+# 独立 Python 环境（类似 ComfyUI 整合包）
+python/
+
+# 离线依赖包缓存
+packages/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

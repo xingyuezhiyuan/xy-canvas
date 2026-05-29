@@ -1,0 +1,44 @@
+[
+  {
+    "id": "api-zl5kxk",
+    "name": "魔搭",
+    "base_url": "https://api-inference.modelscope.cn/v1/",
+    "protocol": "apimart",
+    "image_models": [
+      "MusePublic/Qwen-Image-Edit"
+    ],
+    "chat_models": [
+      "Qwen/Qwen3-VL-8B-Instruct"
+    ],
+    "video_models": [],
+    "primary": false,
+    "enabled": true
+  },
+  {
+    "id": "uki",
+    "name": "uki",
+    "base_url": "https://api.ukiyostudio.co",
+    "protocol": "openai",
+    "image_models": [
+      "gpt-image-2",
+      "gemini-3.5-flash"
+    ],
+    "chat_models": [],
+    "video_models": [],
+    "primary": false,
+    "enabled": true
+  },
+  {
+    "id": "api",
+    "name": "新 API 平台",
+    "base_url": "https://newapi.mrvbg.top",
+    "protocol": "openai",
+    "image_models": [
+      "gemini-3.1-flash-image-preview"
+    ],
+    "chat_models": [],
+    "video_models": [],
+    "primary": false,
+    "enabled": true
+  }
+]

@@ -1,0 +1,2562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComfyUI提示词懒人工具</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    const COMFYUI_CONFIG = {"local_address": "127.0.0.1:8188", "cloud_address": "https://kg03rrnf6rg9bxab-8188.container.x-gpu.com/", "active_server": "本地服务器"};
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#10B981',
+                        secondary: '#3B82F6',
+                        accent: '#F59E0B',
+                        dark: '#121212',
+                        light: '#F8FAFC'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+
+        * {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #121212 0%, #1e1e1e 50%, #181818 100%);
+        }
+        
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip-content {
+            visibility: hidden;
+            width: 320px;
+            background-color: rgba(10, 10, 20, 0.95);
+            color: #e0e0e0;
+            text-align: left;
+            border-radius: 12px;
+            padding: 12px;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%); will-change: transform;
+            opacity: 0;
+            transition: opacity 0.3s; will-change: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .dark .tooltip-content {
+            background-color: rgba(10, 10, 20, 0.95);
+            color: #e0e0e0;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .tooltip-container:hover .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .tooltip-content img {
+            width: 100%;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        
+        .tooltip-content video {
+            width: 100%;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        
+        .tooltip-content .description {
+            font-size: 14px;
+            line-height: 1.4;
+            color: #94a3b8;
+        }
+        
+        .dark .tooltip-content .description {
+            color: #94a3b8;
+        }
+        
+        .tooltip-arrow {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%); will-change: transform;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid rgba(10, 10, 20, 0.95);
+        }
+        
+        .dark .tooltip-arrow {
+            border-top-color: rgba(10, 10, 20, 0.95);
+        }
+        
+       .param-btn.active {
+    background: linear-gradient(135deg, #10B981, #3B82F6);
+    color: white;
+    font-weight: 500;
+    border: 2px solid #10B981;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+
+.dark .param-btn.active {
+    background: linear-gradient(135deg, #10B981, #3B82F6);
+    color: white;
+    border: 2px solid #10B981;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+}
+
+.param-btn {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: #e0e0e0;
+}
+
+.param-btn:hover {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.dark .param-btn {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: #e0e0e0;
+}
+
+.dark .param-btn:hover {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+}
+        .scrollbar-thin {
+            scrollbar-width: thin;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background-color: rgba(16, 185, 129, 0.5);
+            border-radius: 2px;
+        }
+        
+        .transition-custom {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); will-change: auto;
+        }
+        
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-panel {
+            background: rgba(10, 10, 20, 0.8);
+            backdrop-filter: blur(15px);
+            border-radius: 16px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+
+        .card-title {
+            color: #10B981;
+            border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .form-input-custom {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #fff;
+        }
+
+        .form-input-custom:focus {
+            border-color: #10B981;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+            background: rgba(0,0,0,0.7);
+        }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #10B981, #3B82F6);
+            color: white;
+        }
+
+        .btn-primary-custom:hover {
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        @media (max-width: 768px) {
+            .tooltip-content {
+                width: 280px;
+            }
+        }
+    
+        /* 性能优化：减少页面抖动 */
+        html, body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            -webkit-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* 硬件加速优化 */
+        .panel, .container, header, main, section {
+            -webkit-transform: translateZ(0); will-change: transform;
+            -moz-transform: translateZ(0); will-change: transform;
+            -ms-transform: translateZ(0); will-change: transform;
+            -o-transform: translateZ(0); will-change: transform;
+            transform: translateZ(0); will-change: transform;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+        
+        /* 优化动画性能 */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    
+    </style>
+</head>
+<body class="min-h-screen text-gray-100">
+    <!-- 导航栏 -->
+    <nav class="bg-black/50 backdrop-blur-md border-b border-emerald-500/20 fixed w-full z-50 transition-custom">
+        <div class="container mx-auto px-3 py-2 max-w-5xl flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-film text-emerald-400 text-xl"></i>
+                <h1 class="text-lg font-bold bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent">ComfyUI 提示词懒人工具 <span class="text-sm font-normal text-gray-400">（源自B站up AI瑶言）</span></h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="theme-toggle" class="p-2 rounded-full hover:bg-emerald-500/20 transition-custom">
+                    <i class="fas fa-moon text-emerald-400"></i>
+                </button>
+                <button id="help-btn" class="p-2 rounded-full hover:bg-emerald-500/20 transition-custom">
+                    <i class="fas fa-question text-emerald-400"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto px-3 py-2 max-w-5xl">
+        <div class="flex flex-col lg:flex-row gap-4">
+            <!-- 左侧参数选择区 -->
+            <div class="lg:w-2/3 space-y-4">
+                <!-- 核心描述 -->
+                <div class="card-panel rounded-xl p-4 transform hover:shadow-lg transition-custom">
+                    <div class="flex items-center mb-3 pb-2 border-b border-emerald-500/30">
+                        <i class="fas fa-file-alt text-emerald-400 mr-2"></i>
+                        <h3 class="text-lg font-bold text-emerald-400">核心描述</h3>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-gray-300 font-medium mb-1.5" for="main-subject">主体内容</label>
+                        <input type="text" id="main-subject" placeholder="" 
+                               class="w-full px-3 py-2 rounded-lg border border-emerald-500/30 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-custom bg-black/50 text-white focus:shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 font-medium mb-1.5" for="additional-desc">补充描述</label>
+                        <textarea id="additional-desc" rows="3" placeholder="" 
+                                  class="w-full px-3 py-2 rounded-lg border border-emerald-500/30 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-custom bg-black/50 text-white focus:shadow-[0_0_15px_rgba(16,185,129,0.3)]"></textarea>
+                    </div>
+                </div>
+                
+                <!-- 美学描述 -->
+                <div class="card-panel rounded-xl p-4 transform hover:shadow-lg transition-custom">
+                    <div class="flex items-center mb-3 pb-2 border-b border-emerald-500/30">
+                        <i class="fas fa-paint-brush text-emerald-400 mr-2"></i>
+                        <h3 class="text-lg font-bold text-emerald-400">美学描述</h3>
+                    </div>
+                  
+                    <!-- 画面质量 -->
+                    <div class="mb-6">
+                        <label class="block text-gray-300 font-medium mb-2">画面质量</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="image_quality">
+                                    极高画质
+                                </button>
+                                <div class="tooltip-content">
+                                    <div class="description">超高清晰度，细节丰富，适用于专业影视制作</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="image_quality">
+                                    极致细节
+                                </button>
+                                <div class="tooltip-content">
+                                    <div class="description">画面细节极致呈现，适合微距和特写拍摄</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="image_quality">
+                                    2K 超清
+                                </button>
+                                <div class="tooltip-content">
+                                    <div class="description">2K分辨率，清晰细腻，适合大多数显示设备</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="image_quality">
+                                    4K 超清
+                                </button>
+                                <div class="tooltip-content">
+                                    <div class="description">4K分辨率，影院级清晰度，细节表现力强</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="image_quality">
+                                    8K超清
+                                </button>
+                                <div class="tooltip-content">
+                                    <div class="description">8K超高清，细节分毫毕现，适合专业影视制作</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="image_quality">
+                                    高质量
+                                </button>
+                                <div class="tooltip-content">
+                                    <div class="description">高于平均水平的画面质量，适合日常专业拍摄</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="image_quality">
+                                    普通质量
+                                </button>
+                                <div class="tooltip-content">
+                                    <div class="description">标准画面质量，适用于一般用途</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 画面比例 -->
+                    <div class="mb-6">
+                        <label class="block text-gray-300 font-medium mb-2">画面比例</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="aspect_ratio">
+                                    1:1
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/aspect11.png" alt="1:1比例示例">
+                                    <div class="description">正方形构图，常用于Instagram、头像、产品展示等</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="aspect_ratio">
+                                    3:2
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/aspect32.png" alt="3:2比例示例">
+                                    <div class="description">传统35mm胶片比例，适合人像和风景摄影，打印友好</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="aspect_ratio">
+                                    4:3
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/aspect43.png" alt="4:3比例示例">
+                                    <div class="description">传统电视和显示器比例，适合传统摄影和部分视频内容</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="aspect_ratio">
+                                    16:9 
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/aspect169.png" alt="16:9比例示例">
+                                    <div class="description">高清电视、视频标准比例，主流电脑显示器比例，适合电影、电视和在线视频</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="aspect_ratio">
+                                    16:10
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/aspect1610.png" alt="16:10比例示例">
+                                    <div class="description">笔记本电脑和宽屏显示器常用比例，适合网页设计和办公应用</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="aspect_ratio">
+                                    2.35:1
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/aspect2351.png" alt="2.35:1比例示例">
+                                    <div class="description">影院级宽屏比例，电影感强烈，适合史诗场景和电影制作</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="aspect_ratio">
+                                    21:9
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/aspect219.png" alt="21:9比例示例">
+                                    <div class="description">超宽屏显示器比例，沉浸感强，适合游戏和创意工作</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="aspect_ratio">
+                                    9:16
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/aspect916.png" alt="9:16比例示例">
+                                    <div class="description">手机竖屏视频标准，适合抖音/快手、TikTok、Instagram Reels、短视频平台</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="aspect_ratio">
+                                    2:3
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/aspect23.png" alt="2:3比例示例">
+                                    <div class="description">竖屏照片比例，适合手机壁纸、社交媒体封面和肖像摄影</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="aspect_ratio">
+                                    4:5
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/aspect45.png" alt="4:5比例示例">
+                                    <div class="description">Instagram推荐竖屏比例，适合人像和产品展示，在手机上显示效果好</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="aspect_ratio">
+                                    5:4
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/aspect54.png" alt="5:4比例示例">
+                                    <div class="description">传统方形显示器比例，适合文档处理和传统应用</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="aspect_ratio">
+                                    3:4
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/aspect34.png" alt="3:4比例示例">
+                                    <div class="description">传统竖屏照片比例，适合杂志封面和打印照片</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- 画面风格 -->
+<div class="mb-6">
+    <label class="block text-gray-300 font-medium mb-2">画面风格</label>
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <!-- 3D 渲染风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                3D 渲染风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/3d_rendering.png" alt="3D渲染风格示例">
+                <div class="description">三维立体效果，真实光影渲染，适合建筑和产品展示</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- CG 动画风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                CG 动画风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/cg_animation.png" alt="CG动画风格示例">
+                <div class="description">计算机生成动画效果，画面精致细腻，适合特效制作</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 巴洛克风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                巴洛克风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/baroque.png" alt="巴洛克风格示例">
+                <div class="description">华丽繁复，充满动感和戏剧性，适合艺术创作</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 毕加索风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                毕加索风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/picasso.png" alt="毕加索风格示例">
+                <div class="description">立体主义表现手法，几何化构图，充满艺术感</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 彩色铅笔风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                彩色铅笔风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/colored_pencil.png" alt="彩色铅笔风格示例">
+                <div class="description">手绘质感，线条柔和，色彩层次丰富，适合插画创作</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 抽象风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                抽象风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/abstract.png" alt="抽象风格示例">
+                <div class="description">非具象表现形式，强调色彩和形状的构成</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 电影写真 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                电影写真
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/cinematic_portrait.png" alt="电影写真示例">
+                <div class="description">电影级人像摄影，光影层次丰富，情感表达深刻</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 动漫风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                动漫风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/anime.png" alt="动漫风格示例">
+                <div class="description">日本动画风格，线条清晰，色彩鲜明，角色生动</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 儿童绘画风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                儿童绘画风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/children_drawing.png" alt="儿童绘画风格示例">
+                <div class="description">天真烂漫，色彩鲜艳，线条稚拙，充满童趣</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 二次元风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                二次元风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/two_dimensional.png" alt="二次元风格示例">
+                <div class="description">平面化动漫风格，强调线条和色块，典型的ACG文化特征</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 风景 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                风景
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/landscape.png" alt="风景示例">
+                <div class="description">自然风光摄影，构图宏大，色彩自然，适合户外场景</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 复古动漫风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                复古动漫风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/retro_anime.png" alt="复古动漫风格示例">
+                <div class="description">怀旧动画质感，色彩饱和度低，带有年代感</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 港风动漫风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                港风动漫风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/hongkong_anime.png" alt="港风动漫风格示例">
+                <div class="description">香港特色动漫风格，融合东方元素和现代设计</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 古典风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                古典风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/classical.png" alt="古典风格示例">
+                <div class="description">传统艺术风格，构图严谨，色彩沉稳，富有历史感</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 绘本风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                绘本风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/picture_book.png" alt="绘本风格示例">
+                <div class="description">儿童图书插图风格，画面温馨，故事性强</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 卡通风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                卡通风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/cartoon.png" alt="卡通风格示例">
+                <div class="description">夸张变形，色彩鲜艳，形象可爱，适合儿童内容</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 伦勃朗风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                伦勃朗风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/rembrandt.png" alt="伦勃朗风格示例">
+                <div class="description">经典油画技法，戏剧性光影效果，人物刻画深刻</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 马蒂斯风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                马蒂斯风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/matisse.png" alt="马蒂斯风格示例">
+                <div class="description">野兽派艺术风格，色彩强烈，形式简化，充满表现力</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 莫奈风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                莫奈风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/monet.png" alt="莫奈风格示例">
+                <div class="description">印象派绘画风格，光影变化丰富，色彩柔和朦胧</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 木版画风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                木版画风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/woodcut.png" alt="木版画风格示例">
+                <div class="description">传统版画效果，线条粗犷有力，黑白对比强烈</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 平面插画风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                平面插画风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/flat_illustration.png" alt="平面插画风格示例">
+                <div class="description">简约平面设计，色块分明，无立体感，现代感强</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 人像摄影 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                人像摄影
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/portrait_photography.png" alt="人像摄影示例">
+                <div class="description">专业人像拍摄，注重人物神态和情感表达</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 锐笔插画风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                锐笔插画风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/sharp_pen_illustration.png" alt="锐笔插画风格示例">
+                <div class="description">线条锐利清晰，细节丰富，适合技术插画</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 赛博朋克风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                赛博朋克风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/cyberpunk.png" alt="赛博朋克风格示例">
+                <div class="description">未来科技感，霓虹灯光，高科技低生活，反乌托邦</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 手办风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                手办风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/action_figure.png" alt="手办风格示例">
+                <div class="description">模型玩具质感，细节精致，适合角色设计</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 水彩画风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                水彩画风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/watercolor.png" alt="水彩画风格示例">
+                <div class="description">透明水彩效果，色彩渐变自然，笔触柔和</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 水墨画风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                水墨画风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/ink_wash.png" alt="水墨画风格示例">
+                <div class="description">中国传统水墨效果，笔墨韵味，意境深远</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 像素风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                像素风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/pixel.png" alt="像素风格示例">
+                <div class="description">复古游戏像素效果，低分辨率，怀旧感强</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 荧光绘画风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                荧光绘画风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/fluorescent.png" alt="荧光绘画风格示例">
+                <div class="description">荧光色系，高饱和度，夜光效果，视觉冲击力强</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 油画风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                油画风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/oil_painting.png" alt="油画风格示例">
+                <div class="description">传统油画质感，笔触厚重，色彩浓郁丰富</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 油墨印刷风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                油墨印刷风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/ink_printing.png" alt="油墨印刷风格示例">
+                <div class="description">印刷品质感，网点效果，色彩饱和度高</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 中国工笔画风格 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="style">
+                中国工笔画风格
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/chinese_gongbi.png" alt="中国工笔画风格示例">
+                <div class="description">传统工笔画技法，线条精细，色彩细腻，装饰性强</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+    </div>
+</div>
+                    <!-- 光源类型 -->
+                    <div class="mb-6">
+                        <label class="block text-gray-300 font-medium mb-2">光源类型</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="lighting">
+                                    自然光
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/natural_light.png" alt="自然光示例">
+                                    <div class="description">来自太阳、月亮等自然光源，光线柔和自然，适合户外拍摄</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="lighting">
+                                    柔光
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/soft_light.png" alt="柔光示例">
+                                    <div class="description">经过扩散的光线，阴影柔和，适合人像拍摄</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="lighting">
+                                    日落光
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/sunset_light.png" alt="日落光示例">
+                                    <div class="description">日落时分的暖红色光线，带有金色调，氛围感强</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="lighting">
+                                    黄金时刻
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/golden_hour.png" alt="黄金时刻示例">
+                                    <div class="description">日出后和日落前的短暂时间，光线温暖柔和，适合拍摄人像和风景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <!-- 人工光 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lighting">
+        人工光
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/artificial_light.png" alt="人工光示例">
+        <div class="description">来自灯光、闪光灯等人造光源，可控制强度和色温，适合室内拍摄</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 硬光 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lighting">
+        硬光
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/hard_light.png" alt="硬光示例">
+        <div class="description">直射光线，阴影明显锐利，适合创造戏剧性效果和强烈对比</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 背光 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lighting">
+        背光
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/backlight.png" alt="背光示例">
+        <div class="description">从主体后方照射的光线，可创造剪影效果，突出轮廓和氛围</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 侧光 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lighting">
+        侧光
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/side_light.png" alt="侧光示例">
+        <div class="description">从主体侧面照射的光线，增强立体感和纹理，适合展现质感</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 顶光 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lighting">
+        顶光
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/top_light.png" alt="顶光示例">
+        <div class="description">从上方照射的光线，常用于营造神秘氛围或戏剧性效果</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 环形光 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lighting">
+        环形光
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/ring_light.png" alt="环形光示例">
+        <div class="description">环绕主体的均匀光线，常见于产品拍摄和人像摄影，减少阴影</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 窗光 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lighting">
+        窗光
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/window_light.png" alt="窗光示例">
+        <div class="description">模拟窗户透入的光线，呈现长方形光效，柔和自然</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 聚光灯 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lighting">
+        聚光灯
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/spotlight.png" alt="聚光灯示例">
+        <div class="description">强烈的点光源，产生明显的阴影和高光，适合突出特定区域</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 反射光 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lighting">
+        反射光
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/reflected_light.png" alt="反射光示例">
+        <div class="description">通过反射板或反光伞反射的光线，柔和且均匀，适合补光</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 环境光 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lighting">
+        环境光
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/ambient_light.png" alt="环境光示例">
+        <div class="description">微弱的环境光，通常作为补光使用，提供基础照明</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 蝴蝶光 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lighting">
+        蝴蝶光
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/butterfly_light.png" alt="蝴蝶光示例">
+        <div class="description">具有方向性的柔和光线，常用于人像拍摄，产生蝴蝶形阴影</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 底光 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lighting">
+        底光
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/bottom_light.png" alt="底光示例">
+        <div class="description">从下方照射的光线，创造特殊效果或恐怖氛围，不常见于常规拍摄</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+                        </div>
+                    </div>
+       
+                    <!-- 时间设定 -->
+                    <div class="mb-6">
+                        <label class="block text-gray-300 font-medium mb-2">时间设定</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="time">
+                                    早晨
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/morning.png" alt="早晨示例">
+                                    <div class="description">日出后几小时，光线明亮温暖，适合拍摄清新活力的场景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="time">
+                                    午后
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/afternoon.png" alt="午后示例">
+                                    <div class="description">下午早些时候，光线仍然充足但不刺眼，适合拍摄日常场景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="time">
+                                    黄昏
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/dusk.png" alt="黄昏示例">
+                                    <div class="description">日落前后，天空呈现橙红色调，适合拍摄浪漫和温馨场景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="time">
+                                    夜晚
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/night.png" alt="夜晚示例">
+                                    <div class="description">黑暗环境，可能有月光或人工光源照明，适合拍摄夜景和神秘氛围</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+        
+        <!-- 其他选项 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="time">
+                黎明
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/dawn.png" alt="黎明示例">
+                <div class="description">日出前后，光线柔和呈金黄色，天空呈现渐变色，适合拍摄宁静场景</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="time">
+                中午
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/noon.png" alt="中午示例">
+                <div class="description">日照最强烈的时段，光线直射，阴影短而强烈，适合表现明亮活力场景</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="time">
+                傍晚
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/evening.png" alt="傍晚示例">
+                <div class="description">日落后至天黑前，天空呈现深蓝色，光线柔和，适合拍摄温馨场景</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="time">
+                黄金时刻
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/golden_hour.png" alt="黄金时刻示例">
+                <div class="description">日出后和日落前的短暂时间，光线温暖柔和，适合拍摄人像和风景</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="time">
+                魔幻时刻
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/blue_hour.png" alt="魔幻时刻示例">
+                <div class="description">日落后或日出前，天空呈现蓝紫色调，光线柔和梦幻，适合拍摄浪漫场景</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="time">
+                午夜
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/midnight.png" alt="午夜示例">
+                <div class="description">深夜，大多数人已入睡的时段，适合拍摄静谧或神秘氛围的场景</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="time">
+                拂晓
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/daybreak.png" alt="拂晓示例">
+                <div class="description">凌晨时分，天色未亮但即将破晓，光线微弱柔和，适合拍摄宁静场景</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="time">
+                雾天
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/foggy_day.png" alt="雾天示例">
+                <div class="description">雾天，光线柔和，能见度低，有朦胧感，适合拍摄神秘或梦幻场景</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 构图方式 -->
+                    <div class="mb-6">
+                        <label class="block text-gray-300 font-medium mb-2">构图方式</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="composition">
+                                    三分法构图
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/rule_of_thirds.png" alt="三分法构图示例">
+                                    <div class="description">两横两竖线分画面为九宫格，主体放交叉点或分割线以突出平衡。</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="composition">
+                                    对称构图
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/symmetry.png" alt="对称构图示例">
+                                    <div class="description">画面元素左右或上下对称，呈现稳定感和秩序感</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="composition">
+                                    引导线构图
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/leading_lines.png" alt="引导线构图示例">
+                                    <div class="description">利用线条引导观众视线到主体，增强画面深度</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="composition">
+                                    中心构图
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/center_composition.png" alt="中心构图示例">
+                                    <div class="description">主体位于画面中心，强调主体，适合肖像和产品拍摄</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+        <!-- 其他选项 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="composition">
+                框架构图
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/frame_composition.png" alt="框架构图示例">
+                <div class="description">通过前景元素框架突出主体，增强画面层次感和深度</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="composition">
+                三角形构图
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/triangle_composition.png" alt="三角形构图示例">
+                <div class="description">利用画面中的三角形结构创造稳定感，适合表现稳固和平衡</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="composition">
+                对比构图
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/contrast_composition.png" alt="对比构图示例">
+                <div class="description">主体与背景形成对比，突出主体，增强视觉冲击力</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="composition">
+                重复构图
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/repetition_composition.png" alt="重复构图示例">
+                <div class="description">利用重复元素创造节奏感，增强画面的统一性和秩序感</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="composition">
+                留白构图
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/negative_space.png" alt="留白构图示例">
+                <div class="description">将主体放在画面边缘，营造留白意境，增强想象空间</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="composition">
+                对角线构图
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/diagonal_composition.png" alt="对角线构图示例">
+                <div class="description">利用对角线形成动态感，增强画面的活力和引导性</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 色彩风格 -->
+                    <div class="mb-6">
+                        <label class="block text-gray-300 font-medium mb-2">色彩风格</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="color">
+                                    高饱和度
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/high_saturation.png" alt="高饱和度示例">
+                                    <div class="description">色彩鲜明，对比强烈，适合表现活力四射的场景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="color">
+                                    低饱和度
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/low_saturation.png" alt="低饱和度示例">
+                                    <div class="description">色彩淡雅，适合文艺风格和情绪表达</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="color">
+                                    暖色调
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/warm_tone.png" alt="暖色调示例">
+                                    <div class="description">暖色调为主，营造温馨氛围，适合家庭和情感场景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="color">
+                                    冷色调
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/cool_tone.png" alt="冷色调示例">
+                                    <div class="description">冷色调为主，营造冷静氛围，适合科技和悬疑场景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+        <!-- 其他选项 -->
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="color">
+                高对比度
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/high_contrast.png" alt="高对比度示例">
+                <div class="description">高对比度，明暗分明，色彩鲜艳，适合表现强烈视觉冲击力</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="color">
+                低对比度
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/low_contrast.png" alt="低对比度示例">
+                <div class="description">低对比度，色调柔和，色彩过渡平滑，适合表现温柔和宁静氛围</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="color">
+                电影色调
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/cinematic_tone.png" alt="电影色调示例">
+                <div class="description">复古电影色彩风格，通常带有特定的色彩分级，营造电影感</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="color">
+                黑白
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/black_white.png" alt="黑白示例">
+                <div class="description">黑白效果，强调光影和构图，去除色彩干扰，突出形式和纹理</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="color">
+                单色
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/monochrome.png" alt="单色示例">
+                <div class="description">单色调画面，使用单一色调或相近色调，营造特殊氛围和统一感</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="color">
+                卡通色彩
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/cartoon_color.png" alt="卡通色彩示例">
+                <div class="description">色彩鲜艳，如同漫画效果，饱和度高，适合表现活泼和创意场景</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+        <div class="tooltip-container">
+            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                    data-category="color">
+                复古风
+            </button>
+            <div class="tooltip-content">
+                <img src="assets/images/vintage_style.png" alt="复古风示例">
+                <div class="description">带有褪色效果的复古色彩，营造怀旧氛围，通常带有轻微褐色调</div>
+                <div class="tooltip-arrow"></div>
+            </div>
+        </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 技术参数 -->
+                <div class="card-panel rounded-2xl p-6 transform hover:shadow-lg transition-custom">
+                    <div class="flex items-center mb-4 pb-3 border-b border-emerald-500/30">
+                        <i class="fas fa-cogs text-emerald-400 mr-2"></i>
+                        <h3 class="text-xl font-bold text-emerald-400">技术参数</h3>
+                    </div>
+                    
+                    <!-- 镜头类型 -->
+                    <div class="mb-6">
+                        <label class="block text-gray-300 font-medium mb-2">镜头类型</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="lens">
+                                    标准镜头
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/standard_lens.png" alt="标准镜头示例">
+                                    <div class="description">标准视角，接近人眼观察效果，适合大多数场景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="lens">
+                                    广角镜头
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/wide_angle.png" alt="广角镜头示例">
+                                    <div class="description">视角宽广，适合拍摄风景和大型场景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="lens">
+                                    长焦镜头
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/telephoto.png" alt="长焦镜头示例">
+                                    <div class="description">焦距长，适合远距离拍摄和特写，背景压缩感强</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="lens">
+                                    微距镜头
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/macro.png" alt="微距镜头示例">
+                                    <div class="description">可以拍摄非常近的物体，展现细节，适合拍摄小物件</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <!-- 变焦镜头 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lens">
+        变焦镜头
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/zoom_lens.png" alt="变焦镜头示例">
+        <div class="description">焦距可调节，适合多种场景，灵活调整构图，无需更换镜头</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 定焦镜头 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lens">
+        定焦镜头
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/prime_lens.png" alt="定焦镜头示例">
+        <div class="description">大光圈镜头，适合弱光环境和浅景深，画质优秀，轻便易携带</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 鱼眼镜头 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lens">
+        鱼眼镜头
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/fisheye_lens.png" alt="鱼眼镜头示例">
+        <div class="description">超广角镜头，视角极广，边缘有畸变，适合创意拍摄和特殊效果</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 广角微距镜头 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="lens">
+        广角微距镜头
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/wide_macro_lens.png" alt="广角微距镜头示例">
+        <div class="description">能够在很近的距离拍摄宽视角画面，结合微距和广角特点</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 景别 -->
+                    <div class="mb-6">
+                        <label class="block text-gray-300 font-medium mb-2">景别</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="shot_type">
+                                    全景
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/full_shot.png" alt="全景示例">
+                                    <div class="description">展示主体全貌和周围环境，适合建立场景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="shot_type">
+                                    中景
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/medium_shot.png" alt="中景示例">
+                                    <div class="description">展示主体大部分，兼顾细节和环境，适合对话场景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="shot_type">
+                                    特写
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/close_up.png" alt="特写示例">
+                                    <div class="description">聚焦主体局部细节，强调情感或重要元素</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="shot_type">
+                                    远景
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/long_shot.png" alt="远景示例">
+                                    <div class="description">展示广阔场景和环境，适合表现规模和气势</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <!-- 近景 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="shot_type">
+        近景
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/close_shot.png" alt="近景示例">
+        <div class="description">介于中景和特写之间，突出主体，适合表现人物表情和上半身动作</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 大特写 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="shot_type">
+        大特写
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/extreme_close_up.png" alt="大特写示例">
+        <div class="description">非常近的特写，展示细微细节，如眼睛、嘴唇等，强调情感或重要元素</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 空镜 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="shot_type">
+        空镜
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/empty_shot.png" alt="空镜示例">
+        <div class="description">无人物的风景或建筑镜头，用于氛围营造或场景过渡</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 拍摄角度 -->
+                    <div class="mb-6">
+                        <label class="block text-gray-300 font-medium mb-2">拍摄角度</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="shooting_angle">
+                                    俯视角
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/high_angle.png" alt="俯视角示例">
+                                    <div class="description">从上向下拍摄，突出轮廓和层次，适合表现渺小感</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="shooting_angle">
+                                    仰视角
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/low_angle.png" alt="仰视角示例">
+                                    <div class="description">从下向上拍摄，增强高大感和威严感</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="shooting_angle">
+                                    平视角
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/eye_level.png" alt="平视角示例">
+                                    <div class="description">与主体平行，呈现自然真实状态，适合大多数场景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="shooting_angle">
+                                    侧视角
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/side_angle.png" alt="侧视角示例">
+                                    <div class="description">与主体侧面平行，突出形状和轮廓</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <!-- 逆光角度 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="shooting_angle">
+        逆光角度
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/backlight_angle.png" alt="逆光角度示例">
+        <div class="description">背对光源拍摄，产生剪影效果，突出轮廓和氛围感</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 透视角度 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="shooting_angle">
+        透视角度
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/perspective_angle.png" alt="透视角度示例">
+        <div class="description">通过透视线突出空间感和深度，增强画面的立体感</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+<!-- 广角视角 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="shooting_angle">
+        广角视角
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/wide_angle_view.png" alt="广角视角示例">
+        <div class="description">广角镜头拍摄，展现广阔场景，增强空间感和视觉冲击力</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 长焦视角 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="shooting_angle">
+        长焦视角
+    </button>
+    <div class="tooltip-content">
+        <img src="assets/images/telephoto_view.png" alt="长焦视角示例">
+        <div class="description">长焦镜头拍摄，拉近远处主体，压缩空间感，突出细节</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+                        </div>
+                    </div>
+                    <!-- 视频特效 -->
+                    <div class="mb-6">
+                        <label class="block text-gray-300 font-medium mb-2">视频特效</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="effect">
+                                    浅景深
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/shallow_depth.png" alt="浅景深示例">
+                                    <div class="description">模糊背景，突出主体，适合人像和产品拍摄</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="effect">
+                                    运动模糊
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/motion_blur.png" alt="运动模糊示例">
+                                    <div class="description">画面呈现电影般的动态模糊，增强速度感</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="effect">
+                                    胶片颗粒
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/film_grain.png" alt="胶片颗粒示例">
+                                    <div class="description">画面颗粒感，复古效果，适合怀旧风格</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                            <div class="tooltip-container">
+                                <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                        data-category="effect">
+                                    柔焦
+                                </button>
+                                <div class="tooltip-content">
+                                    <img src="assets/images/soft_focus.png" alt="柔焦示例">
+                                    <div class="description">画面边缘失焦，模拟梦幻效果，适合浪漫场景</div>
+                                    <div class="tooltip-arrow"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 运镜方式 -->
+                <div class="card-panel rounded-2xl p-6 transform hover:shadow-lg transition-custom">
+                    <div class="flex items-center mb-4 pb-3 border-b border-emerald-500/30">
+                        <i class="fas fa-video text-emerald-400 mr-2"></i>
+                        <h3 class="text-xl font-bold text-emerald-400">运镜方式</h3>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        <div class="tooltip-container">
+                            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                    data-category="movement_param">
+                                左移
+                            </button>
+                            <div class="tooltip-content">
+                                <video autoplay muted loop playsinline>
+                                    <source src="assets/videos/left_move.mp4" type="video/mp4">
+                                    您的浏览器不支持视频播放
+                                </video>
+                                <div class="description">相机从左向右平稳移动，画面中物体从左往右转场</div>
+                                <div class="tooltip-arrow"></div>
+                            </div>
+                        </div>
+                        <div class="tooltip-container">
+                            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                    data-category="movement_param">
+                                右移
+                            </button>
+                            <div class="tooltip-content">
+                                <video autoplay muted loop playsinline>
+                                    <source src="assets/videos/right_move.mp4" type="video/mp4">
+                                    您的浏览器不支持视频播放
+                                </video>
+                                <div class="description">相机从右向左平稳移动，画面中物体从右往左转场</div>
+                                <div class="tooltip-arrow"></div>
+                            </div>
+                        </div>
+                        <div class="tooltip-container">
+                            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                    data-category="movement_param">
+                                推进
+                            </button>
+                            <div class="tooltip-content">
+                                <video autoplay muted loop playsinline>
+                                    <source src="assets/videos/push_in.mp4" type="video/mp4">
+                                    您的浏览器不支持视频播放
+                                </video>
+                                <div class="description">相机慢慢靠近拍摄主体，画面中的主体会越来越大、越来越清晰</div>
+                                <div class="tooltip-arrow"></div>
+                            </div>
+                        </div>
+                        <div class="tooltip-container">
+                            <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+                                    data-category="movement_param">
+                                拉远
+                            </button>
+                            <div class="tooltip-content">
+                                <video autoplay muted loop playsinline>
+                                    <source src="assets/videos/pull_out.mp4" type="video/mp4">
+                                    您的浏览器不支持视频播放
+                                </video>
+                                <div class="description">相机慢慢远离拍摄主体，画面中的主体会越来越小，周围环境逐渐显现</div>
+                                <div class="tooltip-arrow"></div>
+                            </div>
+                        </div>
+                        <!-- 左摇 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        左摇
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/left_pan.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机位置不动，镜头向左缓慢转动，像人转头看左边一样</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 右摇 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        右摇
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/right_pan.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机位置不动，镜头向右缓慢转动，像人转头看右边一样</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 上升 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        上升
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/rise_up.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机整体向上移动，画面从低处慢慢拍到高处的内容</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 下降 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        下降
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/drop_down.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机整体向下移动，画面从高处慢慢拍到低处的内容</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 上摇 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        上摇
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/tilt_up.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机位置不动，镜头向上转动，像人抬头看天空一样</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 下摇 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        下摇
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/tilt_down.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机位置不动，镜头向下转动，像人低头看地面一样</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 变焦推进 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        变焦推进
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/zoom_in.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机位置不动，通过调镜头焦距让画面像拉近一样，主体逐渐变大</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 变焦拉远 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        变焦拉远
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/zoom_out.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机位置不动，通过调镜头焦距让画面像推远一样，主体逐渐变小</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 晃动 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        晃动
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/shake.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机故意产生上下左右的抖动，营造紧张、混乱或手持拍摄的感觉</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 跟随 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        跟随
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/follow.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机跟着移动的人或物体走，始终让主体保持在画面中</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 固定镜头 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        固定镜头
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/fixed_shot.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机固定在一个位置不动，镜头也不转，像架在三脚架上拍固定画面</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 登场 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        登场
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/enter.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">让人物或物体从画面外慢慢进入画面中，像演员登场一样</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 自由 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        自由
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/free_move.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机可以随意移动，没有固定方向和轨迹，灵活拍摄想要的画面</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 左环移 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        左环移
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/left_arc_move.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机围绕着主体向左转圈拍摄，能看到主体的各个侧面</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 右环移 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        右环移
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/right_arc_move.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机围绕着主体向右转圈拍摄，能看到主体的各个侧面</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 上扬 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        上扬
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/up_lift.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机镜头向上抬起，画面从平视慢慢变成仰视，突出高大感</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 左跟移 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        左跟移
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/left_follow_move.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机跟着主体一起向左移动，始终让主体保持在画面里</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 右跟移 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        右跟移
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/right_follow_move.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机跟着主体一起向右移动，始终让主体保持在画面里</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 降摇 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        降摇
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/drop_pan.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">相机位置不动，镜头向下转动，从高处慢慢拍到低处，像低头看东西</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 左聚焦 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        左聚焦
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/focus_left.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">画面焦点从右边慢慢移到左边，让左边的物体变得清晰</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 右聚焦 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        右聚焦
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/focus_right.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">画面焦点从左边慢慢移到右边，让右边的物体变得清晰</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+
+<!-- 场景镜头 -->
+<div class="tooltip-container">
+    <button class="param-btn rounded-lg p-3 text-sm transition-custom w-full" 
+            data-category="movement_param">
+        场景镜头
+    </button>
+    <div class="tooltip-content">
+        <video autoplay muted loop playsinline>
+            <source src="assets/videos/scene_shot.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <div class="description">专门拍整个场景的镜头，能让人看清周围环境和整体布局</div>
+        <div class="tooltip-arrow"></div>
+    </div>
+</div>
+                    </div>
+                </div>
+            </div>
+            
+           <!-- 右侧结果展示区 -->
+<div class="lg:w-1/3">
+    <!-- 合并后的提示词与历史记录模块 -->
+    <div class="card-panel rounded-2xl p-6 transform hover:shadow-lg transition-custom sticky top-24 max-h-[calc(100vh-8rem)] flex flex-col">
+        <div class="flex-1 overflow-hidden flex flex-col">
+            <!-- 生成的提示词部分 -->
+            <div class="mb-6">
+                <div class="flex items-center mb-4 pb-3 border-b border-emerald-500/30">
+                    <i class="fas fa-lightbulb text-emerald-400 mr-2"></i>
+                    <h3 class="text-xl font-bold text-emerald-400">生成的提示词</h3>
+                </div>
+                <div class="mb-4">
+                    <textarea id="generated-prompt" rows="8" 
+                              class="w-full px-4 py-3 rounded-lg border border-emerald-500/30 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-custom scrollbar-thin bg-black/50 text-white focus:shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                              placeholder=""></textarea>
+                </div>
+                <div class="flex gap-3">
+                    <!-- 生成按钮 -->
+                    <div class="flex justify-center">
+                        <button id="generate-btn" class="btn-primary-custom font-bold py-4 px-8 rounded-xl shadow-lg transition-custom text-lg flex items-center">
+                            <i class="fas fa-magic mr-2"></i> 生成提示词
+                        </button>
+                    </div>
+                    <button id="copy-btn" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-3 px-4 rounded-lg transition-custom flex items-center justify-center">
+                        <i class="fas fa-copy mr-2"></i> 复制
+                    </button>
+                    <button id="clear-btn" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg transition-custom flex items-center justify-center">
+                        <i class="fas fa-trash mr-2"></i> 清空
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 历史记录部分 -->
+            <div class="flex-1 overflow-hidden flex flex-col">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-emerald-500/30">
+                    <div class="flex items-center">
+                        <i class="fas fa-history text-emerald-400 mr-2"></i>
+                        <h3 class="text-xl font-bold text-emerald-400">历史记录</h3>
+                    </div>
+                    <button id="clear-history" class="text-gray-400 hover:text-gray-300 text-sm transition-custom">
+                        清空全部
+                    </button>
+                </div>
+                <div id="history-list" class="flex-1 overflow-y-auto scrollbar-thin space-y-3 mb-4">
+                    <div class="text-gray-400 text-center py-6">
+                        暂无历史记录
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+        </div>
+    </main>
+
+    <!-- 帮助模态框 -->
+    <div id="help-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="card-panel rounded-2xl max-w-lg w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-emerald-500/30">
+                <h3 class="text-xl font-bold text-emerald-400">使用帮助</h3>
+                <button id="close-help" class="text-gray-400 hover:text-gray-300 transition-custom">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="space-y-4 text-gray-300">
+                <p>1. 在核心描述中输入视频的主体内容和补充细节</p>
+                <p>2. 从各个分类中选择适合的参数，点击即可选中/取消</p>
+                <p>3. 点击"生成提示词"按钮，系统会根据您的选择生成专业提示词</p>
+                <p>4. 生成的提示词可以直接编辑修改，满意后可复制使用</p>
+                <p>5. 所有生成的提示词会自动保存到历史记录中，但清空后不可恢复</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 参数选择功能
+        document.querySelectorAll('.param-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
+
+        // 生成提示词功能
+        document.getElementById('generate-btn').addEventListener('click', function() {
+            const mainSubject = document.getElementById('main-subject').value.trim();
+            const additionalDesc = document.getElementById('additional-desc').value.trim();
+            
+            // 收集所有选中的参数
+            const params = {};
+            document.querySelectorAll('.param-btn.active').forEach(btn => {
+                const category = btn.getAttribute('data-category');
+                if (!params[category]) {
+                    params[category] = [];
+                }
+                params[category].push(btn.textContent.trim());
+            });
+            
+            // 构建提示词 - 每个类别独立一行，用分号结尾
+            let promptParts = [];
+            if (mainSubject) {
+                promptParts.push(mainSubject + '；');
+            }
+            
+            if (additionalDesc) {
+                promptParts.push(additionalDesc + '；');
+            }
+            
+            // 添加参数描述 - 每个类别独立一行
+            Object.entries(params).forEach(([category, values]) => {
+                if (values.length > 0) {
+                    let categoryName = '';
+                    switch(category) {
+                        case 'lighting': categoryName = '光源'; break;
+                        case 'time': categoryName = '时间'; break;
+                        case 'composition': categoryName = '构图'; break;
+                        case 'color': categoryName = '色彩'; break;
+                        case 'lens': categoryName = '镜头'; break;
+                        case 'shot_type': categoryName = '景别'; break;
+                        case 'style': categoryName = '风格'; break;
+                        case 'effect': categoryName = '特效'; break;
+                        case 'image_quality': categoryName = '画面质量'; break;
+                        case 'shooting_angle': categoryName = '拍摄角度'; break;
+                        case 'movement_param': categoryName = '运镜方式'; break;
+                        case 'aspect_ratio': categoryName = '画面比例'; break;
+                    }
+                    promptParts.push(`${categoryName}: ${values.join('，')}；`);
+                }
+            });
+            
+            // 如果没有输入任何内容
+            if (promptParts.length === 0) {
+                promptParts.push('请至少输入主体内容或选择一些参数；');
+            }
+            
+            // 生成最终提示词并显示在可编辑文本框中
+            const finalPrompt = promptParts.join('\n');
+            document.getElementById('generated-prompt').value = finalPrompt;
+            
+            // 保存到历史记录
+            saveToHistory(finalPrompt);
+        });
+
+        // 复制功能
+        document.getElementById('copy-btn').addEventListener('click', function() {
+            const promptText = document.getElementById('generated-prompt');
+            promptText.select();
+            document.execCommand('copy');
+            
+            // 显示复制成功提示
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-check mr-2"></i> 已复制';
+            setTimeout(() => {
+                this.innerHTML = originalText;
+            }, 2000);
+        });
+
+        // 清空提示词
+        document.getElementById('clear-btn').addEventListener('click', function() {
+            document.getElementById('generated-prompt').value = '';
+        });
+
+        // 历史记录功能
+        function saveToHistory(prompt) {
+            let history = JSON.parse(localStorage.getItem('promptHistory') || '[]');
+            history.unshift({
+                text: prompt,
+                time: new Date().toISOString()
+            });
+            
+            // 限制历史记录数量
+            if (history.length > 20) {
+                history = history.slice(0, 20);
+            }
+            
+            localStorage.setItem('promptHistory', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const historyList = document.getElementById('history-list');
+            const history = JSON.parse(localStorage.getItem('promptHistory') || '[]');
+            
+            if (history.length === 0) {
+                historyList.innerHTML = '<div class="text-gray-500 dark:text-gray-400 text-center py-6">暂无历史记录</div>';
+                return;
+            }
+            
+            historyList.innerHTML = '';
+            history.forEach((item, index) => {
+                const date = new Date(item.time);
+                const timeStr = `${date.getMonth()+1}月${date.getDate()}日 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                
+                const historyItem = document.createElement('div');
+                historyItem.className = 'bg-gray-50 dark:bg-gray-700 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-custom cursor-pointer';
+                historyItem.innerHTML = `
+                    <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">${timeStr}</div>
+                    <div class="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">${item.text}</div>
+                `;
+                
+                // 点击历史记录项恢复提示词
+                historyItem.addEventListener('click', function() {
+                    document.getElementById('generated-prompt').value = item.text;
+                });
+                
+                historyList.appendChild(historyItem);
+            });
+        }
+
+        // 清空历史记录
+        document.getElementById('clear-history').addEventListener('click', function() {
+            if (confirm('确定要清空所有历史记录吗？')) {
+                localStorage.removeItem('promptHistory');
+                renderHistory();
+            }
+        });
+
+        // 帮助模态框
+        document.getElementById('help-btn').addEventListener('click', function() {
+            document.getElementById('help-modal').classList.remove('hidden');
+            document.getElementById('help-modal').classList.add('flex');
+        });
+
+        document.getElementById('close-help').addEventListener('click', function() {
+            document.getElementById('help-modal').classList.add('hidden');
+            document.getElementById('help-modal').classList.remove('flex');
+        });
+
+        // 点击模态框外部关闭
+        document.getElementById('help-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.add('hidden');
+                this.classList.remove('flex');
+            }
+        });
+
+        // 主题切换功能
+        document.getElementById('theme-toggle').addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+        });
+
+        // 页面加载时检查主题设置
+        window.addEventListener('load', function() {
+            // 检查本地存储中的主题设置
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+                document.getElementById('theme-toggle').querySelector('i').classList.remove('fa-moon');
+                document.getElementById('theme-toggle').querySelector('i').classList.add('fa-sun');
+            }
+            
+            // 渲染历史记录
+            renderHistory();
+        });
+    </script>
+</body>
+</html>

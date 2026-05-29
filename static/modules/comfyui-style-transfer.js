@@ -1,0 +1,381 @@
+/**
+ * 风格迁移模式
+ * 全局依赖: ComfyUIRegistry, comfyNameForRef, CLIENT_ID
+ */
+
+/**
+ * 风格迁移 模式设置
+ */
+function styleTransferSettings(node) {
+    return `
+        <div class="gen-settings-row">
+            <label class="field"><div class="setting-title">目标尺寸</div><input class="setting-input" data-field="styleTransferSize" type="number" min="512" max="4096" step="64" value="${Number(node.styleTransferSize || 1024)}"></label>
+        </div>
+    `;
+}
+
+/**
+ * 风格迁移 模式执行
+ */
+async function styleTransferExecute(node, refs, prompt, promptId) {
+    if (!refs || refs.length < 2) throw new Error('风格迁移需要2张输入图片');
+    
+    console.log('[风格迁移] refs:', refs);
+    console.log('[风格迁移] refs[0]:', refs[0], 'refs[1]:', refs[1]);
+    
+    const styleImageName = await comfyNameForRef(refs[0]);
+    const contentImageName = await comfyNameForRef(refs[1]);
+    
+    const workflow = {
+        "1": {
+            "inputs": { "vae_name": "qwen_image_vae.safetensors" },
+            "class_type": "VAELoader",
+            "_meta": { "title": "加载VAE" }
+        },
+        "3": {
+            "inputs": {
+                "pixels": ["43", 0],
+                "vae": ["1", 0]
+            },
+            "class_type": "VAEEncode",
+            "_meta": { "title": "VAE编码" }
+        },
+        "5": {
+            "inputs": {
+                "shift": 3,
+                "model": ["14", 0]
+            },
+            "class_type": "ModelSamplingAuraFlow",
+            "_meta": { "title": "采样算法（AuraFlow）" }
+        },
+        "6": {
+            "inputs": {
+                "prompt": "",
+                "clip": ["8", 0],
+                "vae": ["1", 0],
+                "image1": ["43", 0],
+                "image2": ["22", 0]
+            },
+            "class_type": "TextEncodeQwenImageEditPlus",
+            "_meta": { "title": "文本编码（QwenImageEditPlus）" }
+        },
+        "7": {
+            "inputs": {
+                "reference_latents_method": "index_timestep_zero",
+                "conditioning": ["6", 0]
+            },
+            "class_type": "FluxKontextMultiReferenceLatentMethod",
+            "_meta": { "title": "FluxKontext多参考潜在方法" }
+        },
+        "8": {
+            "inputs": {
+                "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+                "type": "qwen_image",
+                "device": "default"
+            },
+            "class_type": "CLIPLoader",
+            "_meta": { "title": "加载CLIP" }
+        },
+        "9": {
+            "inputs": {
+                "samples": ["17", 0],
+                "vae": ["1", 0]
+            },
+            "class_type": "VAEDecode",
+            "_meta": { "title": "VAE解码" }
+        },
+        "13": {
+            "inputs": {
+                "unet_name": "qwen_image_edit_2511_fp8mixed.safetensors",
+                "weight_dtype": "default"
+            },
+            "class_type": "UNETLoader",
+            "_meta": { "title": "UNet加载器" }
+        },
+        "14": {
+            "inputs": {
+                "lora_name": "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+                "strength_model": 1,
+                "model": ["13", 0]
+            },
+            "class_type": "LoraLoaderModelOnly",
+            "_meta": { "title": "LoRA加载器（仅模型）" }
+        },
+        "15": {
+            "inputs": {
+                "strength": 1,
+                "model": ["5", 0]
+            },
+            "class_type": "CFGNorm",
+            "_meta": { "title": "CFG归一化" }
+        },
+        "16": {
+            "inputs": {
+                "lora_name": "style-transfer-1_20.safetensors",
+                "strength_model": 0.8,
+                "model": ["15", 0]
+            },
+            "class_type": "LoraLoaderModelOnly",
+            "_meta": { "title": "LoRA加载器（仅模型）" }
+        },
+        "17": {
+            "inputs": {
+                "seed": 171902881016316,
+                "steps": 8,
+                "cfg": 1,
+                "sampler_name": "euler",
+                "scheduler": "simple",
+                "denoise": 1,
+                "model": ["16", 0],
+                "positive": ["18", 0],
+                "negative": ["7", 0],
+                "latent_image": ["3", 0]
+            },
+            "class_type": "KSampler",
+            "_meta": { "title": "K采样器" }
+        },
+        "18": {
+            "inputs": {
+                "reference_latents_method": "index_timestep_zero",
+                "conditioning": ["19", 0]
+            },
+            "class_type": "FluxKontextMultiReferenceLatentMethod",
+            "_meta": { "title": "FluxKontext多参考潜在方法" }
+        },
+        "19": {
+            "inputs": {
+                "prompt": [
+                    "49", 0
+                ],
+                "clip": ["8", 0],
+                "vae": ["1", 0],
+                "image1": ["36", 0],
+                "image2": ["22", 0]
+            },
+            "class_type": "TextEncodeQwenImageEditPlus",
+            "_meta": { "title": "文本编码（QwenImageEditPlus）" }
+        },
+        "20": {
+            "inputs": { "image": styleImageName },
+            "class_type": "LoadImage",
+            "_meta": { "title": "上传风格参考图" }
+        },
+        "21": {
+            "inputs": { "image": contentImageName },
+            "class_type": "LoadImage",
+            "_meta": { "title": "上传内容图" }
+        },
+        "22": {
+            "inputs": {
+                "aspect_ratio": "original",
+                "proportional_width": 1,
+                "proportional_height": 1,
+                "fit": "letterbox",
+                "method": "lanczos",
+                "round_to_multiple": "8",
+                "scale_to_side": "longest",
+                "scale_to_length": 1024,
+                "background_color": "#000000",
+                "image": ["20", 0]
+            },
+            "class_type": "LayerUtility: ImageScaleByAspectRatio V2",
+            "_meta": { "title": "图层工具：按宽高比缩放 V2" }
+        },
+        "23": {
+            "inputs": {
+                "aspect_ratio": "original",
+                "proportional_width": 1,
+                "proportional_height": 1,
+                "fit": "letterbox",
+                "method": "lanczos",
+                "round_to_multiple": "8",
+                "scale_to_side": "longest",
+                "scale_to_length": 1024,
+                "background_color": "#000000",
+                "image": ["21", 0]
+            },
+            "class_type": "LayerUtility: ImageScaleByAspectRatio V2",
+            "_meta": { "title": "图层工具：按宽高比缩放 V2" }
+        },
+        "30": {
+            "inputs": {
+                "prompt": "将图1改成手绘黑白线稿",
+                "clip": ["8", 0],
+                "vae": ["1", 0],
+                "image1": ["43", 0]
+            },
+            "class_type": "TextEncodeQwenImageEditPlus",
+            "_meta": { "title": "文本编码（QwenImageEditPlus）" }
+        },
+        "31": {
+            "inputs": {
+                "reference_latents_method": "index_timestep_zero",
+                "conditioning": ["30", 0]
+            },
+            "class_type": "FluxKontextMultiReferenceLatentMethod",
+            "_meta": { "title": "FluxKontext多参考潜在方法" }
+        },
+        "32": {
+            "inputs": {
+                "reference_latents_method": "index_timestep_zero",
+                "conditioning": ["33", 0]
+            },
+            "class_type": "FluxKontextMultiReferenceLatentMethod",
+            "_meta": { "title": "FluxKontext多参考潜在方法" }
+        },
+        "33": {
+            "inputs": {
+                "prompt": "",
+                "clip": ["8", 0]
+            },
+            "class_type": "TextEncodeQwenImageEditPlus",
+            "_meta": { "title": "文本编码（QwenImageEditPlus）" }
+        },
+        "34": {
+            "inputs": {
+                "seed": 346697787866617,
+                "steps": 8,
+                "cfg": 1,
+                "sampler_name": "euler",
+                "scheduler": "simple",
+                "denoise": 1,
+                "model": ["15", 0],
+                "positive": ["31", 0],
+                "negative": ["32", 0],
+                "latent_image": ["35", 0]
+            },
+            "class_type": "KSampler",
+            "_meta": { "title": "K采样器" }
+        },
+        "35": {
+            "inputs": {
+                "pixels": ["43", 0],
+                "vae": ["1", 0]
+            },
+            "class_type": "VAEEncode",
+            "_meta": { "title": "VAE编码" }
+        },
+        "36": {
+            "inputs": {
+                "samples": ["34", 0],
+                "vae": ["1", 0]
+            },
+            "class_type": "VAEDecode",
+            "_meta": { "title": "VAE解码" }
+        },
+        "37": {
+            "inputs": {
+                "clean_file_cache": true,
+                "clean_processes": true,
+                "clean_dlls": true,
+                "retry_times": 3,
+                "anything": ["36", 0]
+            },
+            "class_type": "RAMCleanup",
+            "_meta": { "title": "释放内存" }
+        },
+        "40": {
+            "inputs": {
+                "use_waitTemperature": true,
+                "waitTemperature": 50,
+                "waitSeconds": 5,
+                "input": ["36", 0]
+            },
+            "class_type": "HoldUp",
+            "_meta": { "title": "HoldUp" }
+        },
+        "41": {
+            "inputs": {
+                "reserved": 0.6,
+                "mode": "auto",
+                "seed": 731958567258458,
+                "auto_max_reserved": 0,
+                "clean_gpu_before": true
+            },
+            "class_type": "ReservedVRAMSetter",
+            "_meta": { "title": " ⚙️设置预留虚拟内存（GB）" }
+        },
+        "43": {
+            "inputs": {
+                "target_size": Number(node.styleTransferSize || 1024),
+                "resolution_multiple": 32,
+                "upscale_method": "lanczos",
+                "resize_and_pad": true,
+                "input_image": ["23", 0]
+            },
+            "class_type": "DINKI_Resize_And_Pad",
+            "_meta": { "title": "调整大小并填充" }
+        },
+        "45": {
+            "inputs": {
+                "remove_pad": true,
+                "latent_scale": 0,
+                "input_image": ["9", 0],
+                "pad_info": ["43", 1]
+            },
+            "class_type": "DINKI_Remove_Pad_From_Image",
+            "_meta": { "title": "移除图像填充" }
+        },
+        "46": {
+            "inputs": {
+                "custom_path": "",
+                "filename_prefix": "comfyui",
+                "timestamp": "None",
+                "format": "png",
+                "quality": 80,
+                "meta_data": false,
+                "blind_watermark": "",
+                "save_workflow_as_json": false,
+                "preview": true,
+                "images": ["45", 0]
+            },
+            "class_type": "LayerUtility: SaveImagePlus",
+            "_meta": { "title": "图层工具：保存图像增强版(高级)" }
+        },
+        "47": {
+            "inputs": { "prompt": prompt || "style transfer,将图1的画风改为图2的风格" },
+            "class_type": "CR Prompt Text",
+            "_meta": { "title": "文本" }
+        },
+        "48": {
+            "inputs": { "prompt": "" },
+            "class_type": "CR Prompt Text",
+            "_meta": { "title": "文本" }
+        },
+        "49": {
+            "inputs": {
+                "separator": "",
+                "text1": ["47", 0],
+                "text2": ["48", 0]
+            },
+            "class_type": "CR Text Concatenate",
+            "_meta": { "title": "🔤 文本合并" }
+        }
+    };
+    
+    const result = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            prompt: prompt || "style transfer,将图1的画风改为图2的风格",
+            workflow_data: workflow,
+            type: 'styleTransfer',
+            client_id: CLIENT_ID,
+            canvas_id: window.canvas?.id || ''
+        })
+    }).then(async r => { if (!r.ok) throw new Error((await r.json()).detail || '风格迁移失败'); return r.json(); });
+    
+    if (result.error) throw new Error(`风格迁移失败：${result.error}`);
+    if (!result.images?.length) throw new Error('风格迁移失败：未返回图片');
+    return { images: result.images || [] };
+}
+
+// 注册到 ComfyUI 注册表
+ComfyUIRegistry.styleTransfer = {
+    label: '风格迁移',
+    requiresImage: true,
+    maxImages: 2,
+    tooltip: '需要接入两张图片: 第一张为风格参考图，第二张为你需要改变的图像',
+    settings: styleTransferSettings,
+    execute: styleTransferExecute
+};
