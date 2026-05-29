@@ -99,15 +99,14 @@ async function jiandanUploadImage(imageUrl) {
     const blob = await response.blob();
     const filename = imageUrl.split('/').pop()?.split('?')[0] || 'remove_bg.png';
     const formData = new FormData();
-    formData.append('files', blob, filename);
-    const uploadResult = await fetch('/api/ai/upload', {
+    formData.append('file', blob, filename);
+    const uploadResult = await fetch('/api/comfyui/upload/image', {
         method: 'POST',
-        headers: headers,
         body: formData
     });
     if (!uploadResult.ok) throw new Error(`图片上传失败: ${await uploadResult.text()}`);
     const uploadData = await uploadResult.json();
-    return uploadData.files?.[0]?.comfy_name || filename;
+    return uploadData.name || filename;
 }
 
 /**

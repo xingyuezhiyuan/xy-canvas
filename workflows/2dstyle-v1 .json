@@ -1,7 +1,7 @@
 {
   "76": {
     "inputs": {
-      "image": "222 (1).png"
+      "image": "ScreenShot_2026-04-16_223631_896.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -63,7 +63,7 @@
   },
   "125": {
     "inputs": {
-      "noise_seed": 313602191412550
+      "noise_seed": 6109518249787
     },
     "class_type": "RandomNoise",
     "_meta": {
@@ -105,7 +105,7 @@
       "text": "把图像改成xy风格，最佳画质",
       "嵌入提示词": null,
       "clip": [
-        "188",
+        "189",
         1
       ]
     },
@@ -119,7 +119,7 @@
       "text": "",
       "嵌入提示词": null,
       "clip": [
-        "188",
+        "189",
         1
       ]
     },
@@ -132,7 +132,7 @@
     "inputs": {
       "cfg": 1,
       "model": [
-        "188",
+        "189",
         0
       ],
       "positive": [
@@ -282,7 +282,7 @@
   },
   "183": {
     "inputs": {
-      "value": 1067266175431248
+      "value": 1536
     },
     "class_type": "PrimitiveInt",
     "_meta": {
@@ -310,12 +310,14 @@
       "title": "图层工具：保存图像增强版(高级)"
     }
   },
-  "188": {
+  "189": {
     "inputs": {
-      "lora_name": "2dstyle-lora.safetensors",
-      "key": "139749",
+      "lora_name": "xylora-v1.safetensors",
+      "key": "138749",
+      "license_code": "fNgIhwu7mUEkwfHicJ8J8Mu7Pq8ta1Nk",
       "strength_model": 1,
       "strength_clip": 1,
+      "_force_validate": "1777109617.0608208",
       "model": [
         "126",
         0
@@ -325,9 +327,9 @@
         0
       ]
     },
-    "class_type": "LmcqRuntimeLoraDecryption",
+    "class_type": "LmcqAuthLoraDecryption",
     "_meta": {
-      "title": "Lmcq Runtime Lora Decryption"
+      "title": "Lmcq Auth LoRA Decryption"
     }
   }
 }
