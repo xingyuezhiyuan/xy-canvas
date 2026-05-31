@@ -320,7 +320,7 @@ xymap/
 
 ## 相关链接
 
-- COMFLY 注册：https://ai.comfly.chat/register
-- COMFLY Token：https://ai.comfly.chat/token
+- COMFLY 注册：https://api.ukiyostudio.co/register?aff=pKk8
+- COMFLY Token：https://api.ukiyostudio.co/token
 - ModelScope Token：https://www.modelscope.cn/my/access/token
 - ComfyUI 文档：https://docs.comfy.org/
