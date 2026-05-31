@@ -1,8 +1,8 @@
 1. API网站注册：
-https://ai.comfly.chat/register?aff=HAOj137551
+https://api.ukiyostudio.co/register?aff=pKk8
 
 2. 新建API key
-https://ai.comfly.chat/token
+https://api.ukiyostudio.co/token
 
 3. 将key填写到软件的API目录中的.env
 COMFLY_API_KEY=sk-xxxxx
