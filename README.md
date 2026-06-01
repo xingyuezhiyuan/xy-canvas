@@ -1,3 +1,7 @@
+# 项目代码改编自：
+# https://github.com/hero8152/Infinite-Canvas/tree/main
+# 原作者：hero8152
+
 # xymap AI
 
 xymap AI 是一个面向 AI 图像生成、图像编辑、智能对话和无限画布创作的本地 Web 平台。项目采用 **FastAPI 后端 + 静态 HTML/JavaScript 前端** 架构，集成本地 ComfyUI 工作流、COMFLY 在线生图、ModelScope 云端模型、多提供商 API 管理、账号系统、资产库和画布节点编辑能力。
